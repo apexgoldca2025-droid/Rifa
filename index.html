@@ -1,0 +1,1370 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RifaStudio — Sistema de Rifas</title>
+    <meta
+      name="description"
+      content="Sistema completo de rifas en la nube con apartado de boletos en tiempo real, panel de administrador y confirmación por WhatsApp."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body {
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      }
+      .font-mono {
+        font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+      }
+      .tabular-nums {
+        font-variant-numeric: tabular-nums;
+      }
+    </style>
+  </head>
+  <body class="bg-[#F8F8F6] text-[#141413] antialiased selection:bg-teal-900 selection:text-white min-h-screen flex flex-col">
+    <!-- Top Bar -->
+    <header class="sticky top-0 z-30 border-b border-stone-200 bg-[#F8F8F6]/95 backdrop-blur-sm">
+      <div class="mx-auto flex max-w-6xl items-center justify-between gap-8 px-4 py-3.5 sm:px-6">
+        <button
+          id="nav-brand"
+          type="button"
+          class="flex items-center gap-2 text-lg font-bold tracking-tight text-[#141413] whitespace-nowrap shrink-0 cursor-pointer"
+        >
+          <span class="text-teal-700 font-mono">#</span>
+          <span>RifaStudio</span>
+        </button>
+
+        <nav aria-label="Navegación principal" class="hidden md:flex items-center gap-6 text-sm font-medium text-stone-600">
+          <button type="button" data-scroll="boletos" class="hover:text-[#141413] hover:underline underline-offset-4 whitespace-nowrap shrink-0 cursor-pointer">Boletos</button>
+          <button type="button" data-scroll="participantes" class="hover:text-[#141413] hover:underline underline-offset-4 whitespace-nowrap shrink-0 cursor-pointer">Participantes</button>
+          <button type="button" data-scroll="como-funciona" class="hover:text-[#141413] hover:underline underline-offset-4 whitespace-nowrap shrink-0 cursor-pointer">Cómo funciona</button>
+        </nav>
+
+        <div class="flex items-center shrink-0">
+          <button
+            id="btn-toggle-view"
+            type="button"
+            class="inline-flex items-center gap-2 rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-[#141413] hover:bg-stone-100 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+          >
+            Admin
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Container -->
+    <main id="app-root" class="flex-1 pb-16"></main>
+
+    <!-- Footer -->
+    <footer class="border-t border-stone-200 bg-white py-6">
+      <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 text-xs text-stone-500 sm:flex-row sm:px-6">
+        <p>RifaStudio · Sistema de rifas en la nube</p>
+        <button id="footer-toggle-view" type="button" class="font-medium text-stone-700 hover:text-[#141413] hover:underline underline-offset-4 cursor-pointer">
+          Acceso Administrador
+        </button>
+      </div>
+    </footer>
+
+    <script type="module">
+      import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js';
+      import {
+        getAuth,
+        GoogleAuthProvider,
+        onAuthStateChanged,
+        signInWithPopup,
+        signOut,
+      } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js';
+      import {
+        collection,
+        doc,
+        getDoc,
+        getDocs,
+        getFirestore,
+        onSnapshot,
+        query,
+        runTransaction,
+        serverTimestamp,
+        where,
+        writeBatch,
+      } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
+
+      // --- Configuración de Firebase ---
+      const firebaseConfig = {
+        projectId: 'propane-cacao-4fx4d',
+        appId: '1:236087276421:web:fa8d66043d2ac92c0bcaec',
+        apiKey: 'AIzaSyCPPVW0kiVSPfzWTwfheoNZJgqGE7AMVaQ',
+        authDomain: 'propane-cacao-4fx4d.firebaseapp.com',
+        firestoreDatabaseId: 'ai-studio-1825cbaa-e9ad-47fc-8994-d7ca64869f8c',
+        storageBucket: 'propane-cacao-4fx4d.firebasestorage.app',
+        messagingSenderId: '236087276421',
+      };
+
+      const PRIMARY_ADMIN_EMAIL = 'belandrialfredo@gmail.com';
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+      const auth = getAuth(app);
+      const googleProvider = new GoogleAuthProvider();
+
+      const DEFAULT_STARTER_RAFFLE = {
+        title: 'Gran Rifa Edición Especial',
+        description:
+          'Participa apartando tus números favoritos. El ganador se define con las últimas cifras del sorteo oficial.',
+        prizeName: 'Premio Principal Especial',
+        prizeImage: '',
+        ticketPrice: 150,
+        currency: 'MXN',
+        totalTickets: 100,
+        startNumber: 0,
+        drawDate: '30 de Noviembre · 20:00 h',
+        drawMethod: 'Lotería Nacional',
+        whatsappNumber: '5215512345678',
+        paymentInstructions:
+          'Transferencia o depósito. Envía tu comprobante por WhatsApp para confirmar tus boletos como pagados.',
+        status: 'active',
+        isFeatured: true,
+        winnerNumber: '',
+        winnerName: '',
+      };
+
+      // --- Estado global ---
+      const state = {
+        view: 'public',
+        user: null,
+        authReady: false,
+        isAdmin: false,
+        raffles: [],
+        loadingRaffles: true,
+        selectedRaffleId: '',
+        tickets: [],
+        contacts: [],
+        selectedNumbers: [],
+        boardFilter: 'all',
+        boardSearch: '',
+        participantSearch: '',
+        inspectedTicket: null,
+        receipt: null,
+        // Admin state
+        adminTab: 'config',
+        isCreatingNew: false,
+        adminTicketFilter: 'all',
+        adminTicketSearch: '',
+        adminFeedback: null,
+        confirmAction: null,
+        unsubTickets: null,
+        unsubContacts: null,
+      };
+
+      // --- Utilidades ---
+      function esc(str) {
+        return String(str ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function formatTicketNumber(num, totalTickets, startNumber = 0) {
+        const maxNum = Math.max(startNumber + totalTickets - 1, 0);
+        const pad = Math.max(2, String(maxNum).length);
+        return String(num).padStart(pad, '0');
+      }
+
+      function formatMoney(amount, currency = 'MXN') {
+        const symbol = currency === 'EUR' ? '€' : currency === 'PEN' ? 'S/' : '$';
+        const formatted = new Intl.NumberFormat('es-MX', {
+          minimumFractionDigits: amount % 1 === 0 ? 0 : 2,
+          maximumFractionDigits: 2,
+        }).format(amount);
+        return `${symbol}${formatted} ${currency}`;
+      }
+
+      function sanitizeDigits(phone) {
+        return String(phone ?? '').replace(/\D/g, '');
+      }
+
+      function buildWhatsAppUrl({
+        whatsappPhone,
+        raffleTitle,
+        ticketNumbers,
+        totalTickets,
+        startNumber,
+        totalAmount,
+        currency,
+        holderName,
+        holderCity,
+      }) {
+        const digits = sanitizeDigits(whatsappPhone);
+        const formattedTickets = ticketNumbers
+          .slice()
+          .sort((a, b) => a - b)
+          .map((n) => formatTicketNumber(n, totalTickets, startNumber))
+          .join(', ');
+        const cityPart = holderCity?.trim() ? ` (${holderCity.trim()})` : '';
+        const msg = [
+          `Hola, quiero concretar mi compra en *${raffleTitle.trim()}*.`,
+          `• Participante: ${holderName.trim()}${cityPart}`,
+          `• Boletos apartados: ${formattedTickets}`,
+          `• Total a pagar: ${formatMoney(totalAmount, currency)}`,
+        ].join('\n');
+        return `https://wa.me/${digits}?text=${encodeURIComponent(msg)}`;
+      }
+
+      function getActiveRaffle() {
+        if (!state.raffles.length) return null;
+        if (state.selectedRaffleId) {
+          const match = state.raffles.find((r) => r.id === state.selectedRaffleId);
+          if (match) return match;
+        }
+        return state.raffles.find((r) => r.isFeatured) || state.raffles[0];
+      }
+
+      function computeStats(raffle) {
+        const total = raffle.totalTickets;
+        const reservedCount = state.tickets.filter((t) => t.status === 'apartado').length;
+        const paidCount = state.tickets.filter((t) => t.status === 'pagado').length;
+        const occupiedCount = Math.min(total, reservedCount + paidCount);
+        const availableCount = Math.max(0, total - occupiedCount);
+        const soldPercentage = total > 0 ? Math.round((occupiedCount / total) * 100) : 0;
+        return {
+          total,
+          reservedCount,
+          paidCount,
+          occupiedCount,
+          availableCount,
+          soldPercentage,
+          collectedAmount: paidCount * raffle.ticketPrice,
+          pendingAmount: reservedCount * raffle.ticketPrice,
+        };
+      }
+
+      function groupParticipants(tickets) {
+        const map = new Map();
+        for (const t of tickets) {
+          const key = `${t.holderName.trim().toLowerCase()}__${t.holderCity.trim().toLowerCase()}`;
+          const ts = t.createdAt ? t.createdAt.getTime() : 0;
+          if (map.has(key)) {
+            const g = map.get(key);
+            g.tickets.push(t);
+            if (t.status === 'pagado') g.paidCount++;
+            else g.reservedCount++;
+            if (ts > g.latestDate) g.latestDate = ts;
+          } else {
+            map.set(key, {
+              key,
+              holderName: t.holderName,
+              holderCity: t.holderCity,
+              tickets: [t],
+              paidCount: t.status === 'pagado' ? 1 : 0,
+              reservedCount: t.status === 'apartado' ? 1 : 0,
+              latestDate: ts,
+            });
+          }
+        }
+        return Array.from(map.values())
+          .map((g) => ({
+            ...g,
+            tickets: g.tickets.slice().sort((a, b) => a.ticketNumber - b.ticketNumber),
+          }))
+          .sort((a, b) => b.latestDate - a.latestDate);
+      }
+
+      // --- Firestore Listeners ---
+      async function ensureStarterRaffle() {
+        const ref = doc(db, 'raffles', 'rifa-principal');
+        await runTransaction(db, async (tx) => {
+          const snap = await tx.get(ref);
+          if (snap.exists()) return;
+          tx.set(ref, {
+            ...DEFAULT_STARTER_RAFFLE,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+        });
+      }
+
+      function attachRaffleSubListeners(raffleId) {
+        if (state.unsubTickets) state.unsubTickets();
+        if (state.unsubContacts) state.unsubContacts();
+        state.unsubTickets = null;
+        state.unsubContacts = null;
+
+        if (!raffleId) {
+          state.tickets = [];
+          state.contacts = [];
+          render();
+          return;
+        }
+
+        const tq = query(
+          collection(db, `raffles/${raffleId}/tickets`),
+          where('status', 'in', ['apartado', 'pagado'])
+        );
+        state.unsubTickets = onSnapshot(tq, (snap) => {
+          state.tickets = snap.docs
+            .map((d) => {
+              const data = d.data();
+              return {
+                raffleId,
+                ticketKey: d.id,
+                ticketNumber: Number(data.ticketNumber ?? d.id),
+                holderName: String(data.holderName ?? ''),
+                holderCity: String(data.holderCity ?? ''),
+                status: data.status === 'pagado' ? 'pagado' : 'apartado',
+                createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : null,
+              };
+            })
+            .sort((a, b) => a.ticketNumber - b.ticketNumber);
+
+          const taken = new Set(state.tickets.map((t) => t.ticketNumber));
+          state.selectedNumbers = state.selectedNumbers.filter((n) => !taken.has(n));
+          render();
+        });
+
+        if (state.isAdmin) {
+          state.unsubContacts = onSnapshot(
+            collection(db, `raffles/${raffleId}/contacts`),
+            (snap) => {
+              state.contacts = snap.docs.map((d) => {
+                const data = d.data();
+                return {
+                  ticketKey: d.id,
+                  holderName: String(data.holderName ?? ''),
+                  phone: String(data.phone ?? ''),
+                };
+              });
+              render();
+            }
+          );
+        } else {
+          state.contacts = [];
+        }
+      }
+
+      let seededOnce = false;
+      const rq = query(
+        collection(db, 'raffles'),
+        where('status', 'in', ['active', 'paused', 'finished'])
+      );
+      onSnapshot(rq, (snap) => {
+        if (snap.empty && !seededOnce) {
+          seededOnce = true;
+          ensureStarterRaffle().catch(console.error);
+          return;
+        }
+        const prevActiveId = getActiveRaffle()?.id;
+        state.raffles = snap.docs
+          .map((d) => {
+            const data = d.data();
+            return {
+              id: d.id,
+              title: String(data.title ?? ''),
+              description: String(data.description ?? ''),
+              prizeName: String(data.prizeName ?? ''),
+              prizeImage: String(data.prizeImage ?? ''),
+              ticketPrice: Number(data.ticketPrice ?? 0),
+              currency: String(data.currency ?? 'MXN'),
+              totalTickets: Number(data.totalTickets ?? 100),
+              startNumber: Number(data.startNumber) === 1 ? 1 : 0,
+              drawDate: String(data.drawDate ?? ''),
+              drawMethod: String(data.drawMethod ?? ''),
+              whatsappNumber: String(data.whatsappNumber ?? ''),
+              paymentInstructions: String(data.paymentInstructions ?? ''),
+              status: ['paused', 'finished'].includes(data.status) ? data.status : 'active',
+              isFeatured: Boolean(data.isFeatured),
+              winnerNumber: String(data.winnerNumber ?? ''),
+              winnerName: String(data.winnerName ?? ''),
+              createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : null,
+            };
+          })
+          .sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
+        state.loadingRaffles = false;
+
+        const nextActiveId = getActiveRaffle()?.id;
+        if (nextActiveId !== prevActiveId || !state.unsubTickets) {
+          attachRaffleSubListeners(nextActiveId);
+        } else {
+          render();
+        }
+      });
+
+      onAuthStateChanged(auth, async (user) => {
+        state.user = user;
+        if (user && user.emailVerified) {
+          if (user.email === PRIMARY_ADMIN_EMAIL) {
+            state.isAdmin = true;
+          } else {
+            try {
+              const adminSnap = await getDoc(doc(db, 'admins', user.uid));
+              state.isAdmin = adminSnap.exists();
+            } catch {
+              state.isAdmin = false;
+            }
+          }
+        } else {
+          state.isAdmin = false;
+        }
+        state.authReady = true;
+        attachRaffleSubListeners(getActiveRaffle()?.id);
+        render();
+      });
+
+      // --- Acciones de Firestore ---
+      async function reserveTickets(holderName, holderCity, phone) {
+        const raffle = getActiveRaffle();
+        if (!raffle) return;
+        const nums = state.selectedNumbers.slice().sort((a, b) => a - b);
+        if (!nums.length) throw new Error('Selecciona al menos un boleto disponible.');
+        if (nums.length > 25) throw new Error('Máximo 25 boletos por apartado.');
+
+        await runTransaction(db, async (tx) => {
+          const refs = nums.map((num) => ({
+            num,
+            key: String(num),
+            ticketRef: doc(db, 'raffles', raffle.id, 'tickets', String(num)),
+            contactRef: doc(db, 'raffles', raffle.id, 'contacts', String(num)),
+          }));
+          const snaps = await Promise.all(refs.map((r) => tx.get(r.ticketRef)));
+          for (let i = 0; i < snaps.length; i++) {
+            if (snaps[i].exists()) {
+              const fmt = formatTicketNumber(refs[i].num, raffle.totalTickets, raffle.startNumber);
+              throw new Error(`El boleto #${fmt} acaba de ser apartado por otra persona.`);
+            }
+          }
+          for (const item of refs) {
+            tx.set(item.ticketRef, {
+              raffleId: raffle.id,
+              ticketKey: item.key,
+              ticketNumber: item.num,
+              holderName: holderName.trim().slice(0, 80),
+              holderCity: holderCity.trim().slice(0, 60),
+              status: 'apartado',
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+            });
+            tx.set(item.contactRef, {
+              raffleId: raffle.id,
+              ticketKey: item.key,
+              holderName: holderName.trim().slice(0, 80),
+              phone: phone.trim().slice(0, 25),
+              createdAt: serverTimestamp(),
+            });
+          }
+        });
+
+        const totalAmount = nums.length * raffle.ticketPrice;
+        state.receipt = {
+          raffleTitle: raffle.title,
+          holderName: holderName.trim(),
+          formattedNumbers: nums.map((n) => formatTicketNumber(n, raffle.totalTickets, raffle.startNumber)),
+          totalAmount,
+          currency: raffle.currency,
+          paymentInstructions: raffle.paymentInstructions,
+          whatsappUrl: buildWhatsAppUrl({
+            whatsappPhone: raffle.whatsappNumber,
+            raffleTitle: raffle.title,
+            ticketNumbers: nums,
+            totalTickets: raffle.totalTickets,
+            startNumber: raffle.startNumber,
+            totalAmount,
+            currency: raffle.currency,
+            holderName,
+            holderCity,
+          }),
+        };
+        state.selectedNumbers = [];
+        render();
+      }
+
+      async function deleteSubcollection(raffleId, sub) {
+        const snap = await getDocs(collection(db, `raffles/${raffleId}/${sub}`));
+        const docs = snap.docs;
+        for (let i = 0; i < docs.length; i += 400) {
+          const batch = writeBatch(db);
+          docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+          await batch.commit();
+        }
+      }
+
+      // --- Renderizado UI ---
+      function render() {
+        const root = document.getElementById('app-root');
+        const toggleBtn = document.getElementById('btn-toggle-view');
+        const footerBtn = document.getElementById('footer-toggle-view');
+
+        if (state.view === 'admin') {
+          toggleBtn.textContent = 'Ver Rifa';
+          footerBtn.textContent = 'Volver a la rifa';
+          root.innerHTML = renderAdminView();
+          bindAdminEvents();
+          return;
+        }
+
+        toggleBtn.textContent = state.isAdmin ? 'Panel Admin' : 'Admin';
+        footerBtn.textContent = 'Acceso Administrador';
+
+        if (state.loadingRaffles) {
+          root.innerHTML = `<div class="mx-auto max-w-6xl px-4 py-12 text-center text-sm text-stone-500">Cargando rifa en la nube...</div>`;
+          return;
+        }
+
+        const raffle = getActiveRaffle();
+        if (!raffle) {
+          root.innerHTML = `
+            <div class="mx-auto max-w-2xl px-4 py-20 text-center">
+              <h1 class="text-2xl font-bold">No hay rifas publicadas</h1>
+              <p class="mt-2 text-sm text-stone-600">Entra al Panel Admin para crear tu primera rifa.</p>
+              <button id="empty-go-admin" type="button" class="mt-6 rounded-xl bg-[#141413] px-5 py-3 text-sm font-semibold text-white cursor-pointer">Ir al Panel Admin</button>
+            </div>`;
+          document.getElementById('empty-go-admin')?.addEventListener('click', () => {
+            state.view = 'admin';
+            render();
+          });
+          return;
+        }
+
+        const stats = computeStats(raffle);
+        const ticketMap = new Map(state.tickets.map((t) => [t.ticketNumber, t]));
+        const selectedSet = new Set(state.selectedNumbers);
+        const allNumbers = Array.from({ length: raffle.totalTickets }, (_, i) => raffle.startNumber + i);
+
+        const q = state.boardSearch.trim().toLowerCase();
+        const filteredNumbers = allNumbers.filter((num) => {
+          const res = ticketMap.get(num);
+          if (state.boardFilter === 'available' && res) return false;
+          if (state.boardFilter === 'apartado' && res?.status !== 'apartado') return false;
+          if (state.boardFilter === 'pagado' && res?.status !== 'pagado') return false;
+          if (!q) return true;
+          const fmt = formatTicketNumber(num, raffle.totalTickets, raffle.startNumber);
+          return (
+            fmt.includes(q) ||
+            String(num).includes(q) ||
+            (res?.holderName.toLowerCase().includes(q) ?? false) ||
+            (res?.holderCity.toLowerCase().includes(q) ?? false)
+          );
+        });
+
+        const groups = groupParticipants(state.tickets).filter((g) => {
+          const pq = state.participantSearch.trim().toLowerCase();
+          if (!pq) return true;
+          return (
+            g.holderName.toLowerCase().includes(pq) ||
+            g.holderCity.toLowerCase().includes(pq) ||
+            g.tickets.some((t) => formatTicketNumber(t.ticketNumber, raffle.totalTickets, raffle.startNumber).includes(pq))
+          );
+        });
+
+        const statusLabel =
+          raffle.status === 'active'
+            ? 'Rifa activa'
+            : raffle.status === 'paused'
+              ? 'Apartados pausados'
+              : 'Sorteo finalizado';
+
+        const totalAmount = state.selectedNumbers.length * raffle.ticketPrice;
+        const waDigits = sanitizeDigits(raffle.whatsappNumber);
+        const quickWaUrl =
+          state.selectedNumbers.length > 0
+            ? buildWhatsAppUrl({
+                whatsappPhone: raffle.whatsappNumber,
+                raffleTitle: raffle.title,
+                ticketNumbers: state.selectedNumbers,
+                totalTickets: raffle.totalTickets,
+                startNumber: raffle.startNumber,
+                totalAmount,
+                currency: raffle.currency,
+                holderName: 'Participante',
+              })
+            : `https://wa.me/${waDigits}?text=${encodeURIComponent(`Hola, quiero más información sobre *${raffle.title}*.`)}`;
+
+        root.innerHTML = `
+          ${
+            state.raffles.length > 1
+              ? `<div class="mx-auto max-w-6xl px-4 pt-5 sm:px-6 flex flex-wrap items-center gap-2 text-xs text-stone-600">
+                  <span class="font-medium">Rifas disponibles:</span>
+                  ${state.raffles
+                    .map(
+                      (r) => `<button type="button" data-pick-raffle="${esc(r.id)}" class="rounded-lg px-3 py-1.5 font-semibold cursor-pointer ${
+                        r.id === raffle.id ? 'bg-[#141413] text-white' : 'bg-white border border-stone-200 text-[#141413] hover:bg-stone-100'
+                      }">${esc(r.title)}</button>`
+                    )
+                    .join('')}
+                </div>`
+              : ''
+          }
+
+          <!-- Hero -->
+          <section class="mx-auto max-w-6xl px-4 pt-6 pb-8 sm:px-6 sm:pt-10 sm:pb-10">
+            <div class="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-stretch">
+              <div class="lg:col-span-6">
+                <div class="relative h-64 sm:h-80 lg:h-full lg:min-h-[340px] w-full overflow-hidden rounded-2xl border border-stone-200 bg-stone-100">
+                  ${
+                    raffle.prizeImage
+                      ? `<img src="${esc(raffle.prizeImage)}" alt="${esc(raffle.prizeName)}" referrerpolicy="no-referrer" class="h-full w-full object-cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />`
+                      : ''
+                  }
+                  <div class="${raffle.prizeImage ? 'hidden' : 'flex'} h-full w-full flex-col items-center justify-center bg-gradient-to-br from-stone-100 to-stone-200 p-6 text-center">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-teal-800">Premio principal</p>
+                    <p class="mt-2 text-xl font-bold text-[#141413]">${esc(raffle.prizeName)}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex flex-col justify-between rounded-2xl border border-stone-200 bg-white p-6 sm:p-8 lg:col-span-6">
+                <div>
+                  <div class="flex flex-wrap items-center gap-2 text-xs font-medium text-stone-500">
+                    <span class="text-teal-800 font-semibold">${esc(statusLabel)}</span>
+                    <span>·</span>
+                    <span class="tabular-nums">${stats.total} boletos</span>
+                    ${raffle.drawMethod ? `<span>·</span><span>${esc(raffle.drawMethod)}</span>` : ''}
+                  </div>
+                  <h1 class="mt-3 text-2xl font-bold tracking-tight text-[#141413] sm:text-4xl">${esc(raffle.title)}</h1>
+                  <p class="mt-2 text-base font-medium text-teal-800">Premio: ${esc(raffle.prizeName)}</p>
+                  ${raffle.description ? `<p class="mt-3 text-sm leading-relaxed text-stone-600">${esc(raffle.description)}</p>` : ''}
+                  ${
+                    raffle.status === 'finished' && raffle.winnerNumber
+                      ? `<div class="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-4">
+                          <p class="text-xs font-semibold text-amber-900">Boleto ganador #${esc(raffle.winnerNumber)}</p>
+                          <p class="text-sm font-bold text-[#141413]">${esc(raffle.winnerName || 'Ganador confirmado')}</p>
+                        </div>`
+                      : ''
+                  }
+                </div>
+
+                <div class="mt-6 space-y-5 border-t border-stone-100 pt-5">
+                  <div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                    <div>
+                      <p class="text-xs text-stone-500">Boleto</p>
+                      <p class="mt-0.5 font-mono text-base font-semibold text-[#141413] tabular-nums sm:text-lg">${esc(formatMoney(raffle.ticketPrice, raffle.currency))}</p>
+                    </div>
+                    <div>
+                      <p class="text-xs text-stone-500">Disponibles</p>
+                      <p class="mt-0.5 font-mono text-base font-semibold text-teal-800 tabular-nums sm:text-lg">${stats.availableCount} / ${stats.total}</p>
+                    </div>
+                    <div class="col-span-2 sm:col-span-1">
+                      <p class="text-xs text-stone-500">Sorteo</p>
+                      <p class="mt-0.5 text-sm font-semibold leading-snug text-[#141413]">${esc(raffle.drawDate || 'Por definir')}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="mb-1.5 flex items-center justify-between text-xs text-stone-500">
+                      <span>Avance de boletos apartados y pagados</span>
+                      <span class="font-mono font-medium text-[#141413] tabular-nums">${stats.soldPercentage}%</span>
+                    </div>
+                    <div class="h-2 w-full overflow-hidden rounded-full bg-stone-100">
+                      <div class="h-full rounded-full bg-teal-700" style="width:${Math.min(100, stats.soldPercentage)}%"></div>
+                    </div>
+                  </div>
+                  <button type="button" data-scroll="boletos" class="w-full rounded-xl bg-[#141413] px-5 py-3 text-sm font-semibold text-white hover:bg-stone-800 cursor-pointer">
+                    ${raffle.status === 'active' ? 'Elegir mis números ↓' : 'Ver tablero de boletos ↓'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Tablero + Panel de registro -->
+          <section class="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+            <div class="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-start">
+              <div id="boletos" class="scroll-mt-20 space-y-5 lg:col-span-8">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <h2 class="text-xl font-bold tracking-tight text-[#141413]">Tablero de boletos</h2>
+                    <p class="mt-1 text-sm text-stone-600">Toca un boleto disponible para apartarlo o toca uno ocupado para ver quién lo registró.</p>
+                  </div>
+                  ${
+                    raffle.status === 'active'
+                      ? `<div class="flex items-center gap-2 shrink-0">
+                          <button type="button" data-random="1" class="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs font-semibold hover:bg-stone-100 cursor-pointer">1 al azar</button>
+                          <button type="button" data-random="3" class="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs font-semibold hover:bg-stone-100 cursor-pointer">3 al azar</button>
+                        </div>`
+                      : ''
+                  }
+                </div>
+
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div class="inline-flex flex-wrap items-center gap-1 rounded-xl bg-stone-200/70 p-1">
+                    ${[
+                      ['all', 'Todos'],
+                      ['available', 'Disponibles'],
+                      ['apartado', 'Apartados'],
+                      ['pagado', 'Pagados'],
+                    ]
+                      .map(
+                        ([id, label]) =>
+                          `<button type="button" data-filter="${id}" class="rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer ${
+                            state.boardFilter === id ? 'bg-white text-[#141413] shadow-xs' : 'text-stone-600 hover:text-[#141413]'
+                          }">${label}</button>`
+                      )
+                      .join('')}
+                  </div>
+                  <input id="board-search" type="search" value="${esc(state.boardSearch)}" placeholder="Buscar # o participante..." class="w-full sm:w-64 rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-sm focus:border-teal-700 focus:outline-none" />
+                </div>
+
+                ${
+                  state.inspectedTicket
+                    ? `<div class="flex items-center justify-between gap-4 rounded-xl border border-stone-200 bg-white p-4">
+                        <div>
+                          <p class="text-xs font-medium text-stone-500">Boleto #${esc(formatTicketNumber(state.inspectedTicket.ticketNumber, raffle.totalTickets, raffle.startNumber))} · <span class="font-semibold ${state.inspectedTicket.status === 'pagado' ? 'text-teal-800' : 'text-amber-800'}">${state.inspectedTicket.status === 'pagado' ? 'Pagado' : 'Apartado'}</span></p>
+                          <p class="text-sm font-semibold text-[#141413]">Registrado por ${esc(state.inspectedTicket.holderName)}${state.inspectedTicket.holderCity ? ` · ${esc(state.inspectedTicket.holderCity)}` : ''}</p>
+                        </div>
+                        <button type="button" id="close-inspected" class="rounded-lg px-2.5 py-1 text-xs font-semibold text-stone-500 hover:bg-stone-100 cursor-pointer">Cerrar</button>
+                      </div>`
+                    : ''
+                }
+
+                <div class="grid grid-cols-5 gap-2 sm:grid-cols-8 md:grid-cols-10">
+                  ${filteredNumbers
+                    .map((num) => {
+                      const fmt = formatTicketNumber(num, raffle.totalTickets, raffle.startNumber);
+                      const res = ticketMap.get(num);
+                      const isSel = selectedSet.has(num);
+                      let cls = 'border-stone-200 bg-white text-[#141413] hover:border-teal-700 hover:bg-teal-50/40';
+                      let sub = '';
+                      if (res) {
+                        if (res.status === 'pagado') {
+                          cls = 'border-stone-200 bg-stone-200/80 text-stone-600';
+                          sub = '<span class="mt-0.5 text-[10px] font-sans font-medium leading-none">Pag.</span>';
+                        } else {
+                          cls = 'border-amber-300 bg-amber-50 text-amber-900';
+                          sub = '<span class="mt-0.5 text-[10px] font-sans font-medium leading-none">Apart.</span>';
+                        }
+                      } else if (isSel) {
+                        cls = 'border-teal-800 bg-teal-700 text-white';
+                      }
+                      return `<button type="button" data-ticket="${num}" class="flex min-h-[44px] flex-col items-center justify-center rounded-xl border px-1 py-2 font-mono text-sm font-semibold tabular-nums cursor-pointer ${cls}"><span>${fmt}</span>${sub}</button>`;
+                    })
+                    .join('')}
+                </div>
+              </div>
+
+              <!-- Panel de apartado -->
+              <aside id="registro-panel" class="rounded-2xl border border-stone-200 bg-white p-6 lg:col-span-4 lg:sticky lg:top-20">
+                ${
+                  state.receipt
+                    ? `<div>
+                        <h3 class="text-lg font-bold text-teal-800">Boletos apartados en la nube</h3>
+                        <p class="mt-1 text-sm text-stone-600">Tu registro ya es visible en el tablero para todos.</p>
+                        <div class="mt-4 space-y-2.5 rounded-xl border border-stone-200 bg-[#F8F8F6] p-4 text-sm">
+                          <div class="flex justify-between gap-2"><span class="text-stone-500">Participante</span><span class="font-semibold">${esc(state.receipt.holderName)}</span></div>
+                          <div class="flex justify-between gap-2"><span class="text-stone-500">Boletos</span><span class="font-mono font-semibold text-teal-800">${esc(state.receipt.formattedNumbers.join(', '))}</span></div>
+                          <div class="flex justify-between gap-2 border-t border-stone-200 pt-2"><span class="text-stone-500">Total</span><span class="font-mono font-bold">${esc(formatMoney(state.receipt.totalAmount, state.receipt.currency))}</span></div>
+                        </div>
+                        ${
+                          state.receipt.paymentInstructions
+                            ? `<div class="mt-4 rounded-xl border border-stone-200 bg-stone-50 p-3.5 text-xs text-stone-700"><p class="font-semibold text-[#141413] mb-1">Datos para pago</p><p>${esc(state.receipt.paymentInstructions)}</p></div>`
+                            : ''
+                        }
+                        <a href="${esc(state.receipt.whatsappUrl)}" target="_blank" rel="noopener noreferrer" class="mt-5 flex min-h-[44px] w-full items-center justify-center rounded-xl bg-[#16A34A] px-4 py-3 text-sm font-semibold text-white hover:bg-[#15803D]">Concretar compra por WhatsApp</a>
+                        <button type="button" id="btn-reset-receipt" class="mt-2.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-2 text-xs font-semibold text-[#141413] hover:bg-stone-50 cursor-pointer">Apartar otros boletos</button>
+                      </div>`
+                    : `<div>
+                        <div class="flex items-center justify-between">
+                          <h3 class="text-lg font-bold">Tu selección</h3>
+                          ${state.selectedNumbers.length ? `<button type="button" id="btn-clear-sel" class="text-xs font-medium text-stone-500 hover:text-red-700 cursor-pointer">Limpiar</button>` : ''}
+                        </div>
+                        ${
+                          state.selectedNumbers.length === 0
+                            ? `<div class="mt-3 rounded-xl border border-dashed border-stone-300 bg-[#F8F8F6] p-4 text-center text-sm text-stone-600">${
+                                raffle.status === 'active'
+                                  ? 'Selecciona uno o más boletos disponibles en el tablero.'
+                                  : 'Esta rifa no acepta nuevos apartados.'
+                              }</div>`
+                            : `<div class="mt-3 space-y-3">
+                                <div class="flex flex-wrap gap-1.5">
+                                  ${state.selectedNumbers
+                                    .slice()
+                                    .sort((a, b) => a - b)
+                                    .map((n) => `<button type="button" data-remove-num="${n}" class="rounded-lg bg-teal-50 border border-teal-200 px-2.5 py-1 font-mono text-xs font-semibold text-teal-900 cursor-pointer">#${formatTicketNumber(n, raffle.totalTickets, raffle.startNumber)} ×</button>`)
+                                    .join('')}
+                                </div>
+                                <div class="flex items-center justify-between border-t border-stone-100 pt-3">
+                                  <span class="text-sm text-stone-600">${state.selectedNumbers.length} ${state.selectedNumbers.length === 1 ? 'boleto' : 'boletos'}</span>
+                                  <span class="font-mono text-lg font-bold tabular-nums">${esc(formatMoney(totalAmount, raffle.currency))}</span>
+                                </div>
+                              </div>`
+                        }
+                        ${
+                          raffle.status === 'active'
+                            ? `<form id="buyer-form" class="mt-5 space-y-3.5 border-t border-stone-100 pt-5">
+                                <div>
+                                  <label for="buyer-name" class="block text-xs font-semibold">Nombre completo</label>
+                                  <input id="buyer-name" type="text" required maxlength="80" placeholder="Ej. María López" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm focus:border-teal-700 focus:outline-none" />
+                                </div>
+                                <div>
+                                  <label for="buyer-city" class="block text-xs font-semibold">Ciudad o estado (opcional)</label>
+                                  <input id="buyer-city" type="text" maxlength="60" placeholder="Ej. Monterrey, NL" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm focus:border-teal-700 focus:outline-none" />
+                                </div>
+                                <div>
+                                  <label for="buyer-phone" class="block text-xs font-semibold">Teléfono WhatsApp</label>
+                                  <input id="buyer-phone" type="tel" required maxlength="25" placeholder="Ej. 55 1234 5678" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 font-mono text-sm focus:border-teal-700 focus:outline-none" />
+                                  <p class="mt-1 text-[11px] text-stone-500">Privado: solo visible para el organizador.</p>
+                                </div>
+                                <p id="buyer-error" class="hidden rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-800"></p>
+                                <button type="submit" ${state.selectedNumbers.length === 0 ? 'disabled' : ''} class="min-h-[44px] w-full rounded-xl bg-[#141413] px-4 py-3 text-sm font-semibold text-white hover:bg-stone-800 disabled:opacity-50 cursor-pointer">Apartar boletos</button>
+                                <a href="${esc(quickWaUrl)}" target="_blank" rel="noopener noreferrer" class="flex min-h-[44px] w-full items-center justify-center rounded-xl border border-[#16A34A]/30 bg-[#16A34A]/10 px-4 py-2.5 text-sm font-semibold text-[#15803D] hover:bg-[#16A34A]/15">Concretar compra por WhatsApp</a>
+                              </form>`
+                            : ''
+                        }
+                      </div>`
+                }
+              </aside>
+            </div>
+          </section>
+
+          <!-- Participantes registrados -->
+          <section id="participantes" class="scroll-mt-20 mx-auto max-w-6xl px-4 py-10 sm:px-6 border-t border-stone-200">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 class="text-xl font-bold tracking-tight">Participantes registrados</h2>
+                <p class="mt-1 text-sm text-stone-600">Lista en tiempo real de personas que ya apartaron o pagaron boletos.</p>
+              </div>
+              <input id="participant-search" type="search" value="${esc(state.participantSearch)}" placeholder="Buscar participante o número..." class="w-full sm:w-72 rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-sm focus:border-teal-700 focus:outline-none" />
+            </div>
+            ${
+              groups.length === 0
+                ? `<div class="mt-6 rounded-2xl border border-stone-200 bg-white p-10 text-center text-sm text-stone-600">Aún no hay participantes registrados en esta rifa.</div>`
+                : `<div class="mt-6 overflow-hidden rounded-2xl border border-stone-200 bg-white">
+                    <div class="overflow-x-auto">
+                      <table class="w-full text-left text-sm">
+                        <thead>
+                          <tr class="border-b border-stone-200 bg-stone-50 text-xs font-semibold text-stone-600">
+                            <th class="px-4 py-3">Participante</th>
+                            <th class="px-4 py-3">Ciudad</th>
+                            <th class="px-4 py-3">Números apartados</th>
+                            <th class="px-4 py-3 text-right">Estado</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-stone-100">
+                          ${groups
+                            .map((g) => {
+                              const st = g.paidCount > 0 && g.reservedCount === 0 ? 'Pagado' : g.paidCount > 0 ? `${g.paidCount} pag. / ${g.reservedCount} apart.` : 'Apartado';
+                              const numsText = g.tickets.map((t) => formatTicketNumber(t.ticketNumber, raffle.totalTickets, raffle.startNumber)).join(', ');
+                              return `<tr>
+                                <td class="px-4 py-3 font-semibold">${esc(g.holderName)}</td>
+                                <td class="px-4 py-3 text-stone-600">${esc(g.holderCity || '—')}</td>
+                                <td class="px-4 py-3 font-mono text-xs font-medium tabular-nums">${esc(numsText)}</td>
+                                <td class="px-4 py-3 text-right text-xs font-semibold ${g.paidCount > 0 && g.reservedCount === 0 ? 'text-teal-800' : 'text-amber-800'}">${esc(st)}</td>
+                              </tr>`;
+                            })
+                            .join('')}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>`
+            }
+          </section>
+
+          <!-- Cómo funciona -->
+          <section id="como-funciona" class="scroll-mt-20 mx-auto max-w-6xl px-4 py-10 sm:px-6 border-t border-stone-200">
+            <h2 class="text-xl font-bold tracking-tight">Cómo participar</h2>
+            <div class="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
+              <div class="rounded-2xl border border-stone-200 bg-white p-6">
+                <p class="font-mono text-sm font-semibold text-teal-800">01. Elige tus números</p>
+                <p class="mt-2 text-sm text-stone-600">Selecciona boletos disponibles directamente en el tablero o usa la opción al azar.</p>
+              </div>
+              <div class="rounded-2xl border border-stone-200 bg-white p-6">
+                <p class="font-mono text-sm font-semibold text-teal-800">02. Registra tus datos</p>
+                <p class="mt-2 text-sm text-stone-600">Guarda tu nombre y WhatsApp para apartar tus boletos al instante en la nube.</p>
+              </div>
+              <div class="rounded-2xl border border-stone-200 bg-white p-6">
+                <p class="font-mono text-sm font-semibold text-teal-800">03. Concreta por WhatsApp</p>
+                <p class="mt-2 text-sm text-stone-600">Envía tu comprobante con un clic y el organizador confirmará tus números como pagados.</p>
+              </div>
+            </div>
+          </section>
+        `;
+
+        bindPublicEvents(raffle, ticketMap, allNumbers);
+      }
+
+      function bindPublicEvents(raffle, ticketMap, allNumbers) {
+        document.querySelectorAll('[data-scroll]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            document.getElementById(btn.getAttribute('data-scroll'))?.scrollIntoView({ behavior: 'smooth' });
+          });
+        });
+
+        document.querySelectorAll('[data-pick-raffle]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            state.selectedRaffleId = btn.getAttribute('data-pick-raffle');
+            state.selectedNumbers = [];
+            state.receipt = null;
+            state.inspectedTicket = null;
+            attachRaffleSubListeners(state.selectedRaffleId);
+          });
+        });
+
+        document.querySelectorAll('[data-filter]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            state.boardFilter = btn.getAttribute('data-filter');
+            render();
+          });
+        });
+
+        document.getElementById('board-search')?.addEventListener('input', (e) => {
+          state.boardSearch = e.target.value;
+          render();
+          const el = document.getElementById('board-search');
+          el?.focus();
+          el?.setSelectionRange(el.value.length, el.value.length);
+        });
+
+        document.getElementById('participant-search')?.addEventListener('input', (e) => {
+          state.participantSearch = e.target.value;
+          render();
+          const el = document.getElementById('participant-search');
+          el?.focus();
+          el?.setSelectionRange(el.value.length, el.value.length);
+        });
+
+        document.querySelectorAll('[data-random]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const count = Number(btn.getAttribute('data-random'));
+            const taken = new Set([...ticketMap.keys(), ...state.selectedNumbers]);
+            const avail = allNumbers.filter((n) => !taken.has(n));
+            for (let i = avail.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [avail[i], avail[j]] = [avail[j], avail[i]];
+            }
+            state.selectedNumbers = Array.from(new Set([...state.selectedNumbers, ...avail.slice(0, count)])).slice(0, 25);
+            state.receipt = null;
+            render();
+          });
+        });
+
+        document.querySelectorAll('[data-ticket]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const num = Number(btn.getAttribute('data-ticket'));
+            const existing = ticketMap.get(num);
+            if (existing) {
+              state.inspectedTicket = existing;
+              render();
+              return;
+            }
+            if (raffle.status !== 'active') return;
+            state.inspectedTicket = null;
+            state.receipt = null;
+            if (state.selectedNumbers.includes(num)) {
+              state.selectedNumbers = state.selectedNumbers.filter((n) => n !== num);
+            } else if (state.selectedNumbers.length < 25) {
+              state.selectedNumbers = [...state.selectedNumbers, num].sort((a, b) => a - b);
+            }
+            render();
+          });
+        });
+
+        document.getElementById('close-inspected')?.addEventListener('click', () => {
+          state.inspectedTicket = null;
+          render();
+        });
+
+        document.querySelectorAll('[data-remove-num]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const num = Number(btn.getAttribute('data-remove-num'));
+            state.selectedNumbers = state.selectedNumbers.filter((n) => n !== num);
+            render();
+          });
+        });
+
+        document.getElementById('btn-clear-sel')?.addEventListener('click', () => {
+          state.selectedNumbers = [];
+          render();
+        });
+
+        document.getElementById('btn-reset-receipt')?.addEventListener('click', () => {
+          state.receipt = null;
+          render();
+        });
+
+        document.getElementById('buyer-form')?.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const name = document.getElementById('buyer-name').value.trim();
+          const city = document.getElementById('buyer-city').value.trim();
+          const phone = document.getElementById('buyer-phone').value.trim();
+          const errBox = document.getElementById('buyer-error');
+          errBox.classList.add('hidden');
+
+          if (name.length < 2) {
+            errBox.textContent = 'Ingresa tu nombre completo.';
+            errBox.classList.remove('hidden');
+            return;
+          }
+          if (sanitizeDigits(phone).length < 7) {
+            errBox.textContent = 'Ingresa un teléfono de WhatsApp válido.';
+            errBox.classList.remove('hidden');
+            return;
+          }
+
+          try {
+            await reserveTickets(name, city, phone);
+          } catch (err) {
+            errBox.textContent = err.message?.startsWith('{')
+              ? 'No pudimos completar el apartado. Verifica tus datos e intenta nuevamente.'
+              : err.message || 'Error al apartar boletos.';
+            errBox.classList.remove('hidden');
+          }
+        });
+      }
+
+      // --- Panel de Administrador ---
+      function renderAdminView() {
+        if (!state.authReady) {
+          return `<div class="mx-auto max-w-md px-4 py-16 text-center text-sm text-stone-600">Verificando sesión...</div>`;
+        }
+        if (!state.user) {
+          return `
+            <div class="mx-auto max-w-md px-4 py-16">
+              <div class="rounded-2xl border border-stone-200 bg-white p-8 text-center">
+                <h1 class="text-xl font-bold">Panel de Administrador</h1>
+                <p class="mt-2 text-sm text-stone-600">Inicia sesión con tu cuenta autorizada de Google para editar rifas, confirmar pagos o restablecer boletos.</p>
+                <button id="btn-google-login" type="button" class="mt-6 min-h-[44px] w-full rounded-xl bg-[#141413] px-4 py-3 text-sm font-semibold text-white hover:bg-stone-800 cursor-pointer">Iniciar sesión con Google</button>
+              </div>
+            </div>`;
+        }
+        if (!state.isAdmin) {
+          return `
+            <div class="mx-auto max-w-md px-4 py-16">
+              <div class="rounded-2xl border border-stone-200 bg-white p-8 text-center">
+                <h1 class="text-xl font-bold">Acceso restringido</h1>
+                <p class="mt-2 text-sm text-stone-600">La cuenta <strong>${esc(state.user.email)}</strong> no está autorizada como administradora.</p>
+                <button id="btn-google-logout" type="button" class="mt-6 min-h-[44px] w-full rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-sm font-semibold cursor-pointer">Cerrar sesión</button>
+              </div>
+            </div>`;
+        }
+
+        const raffle = state.isCreatingNew ? { ...DEFAULT_STARTER_RAFFLE, title: 'Nueva Rifa', prizeName: '', description: '' } : getActiveRaffle() || DEFAULT_STARTER_RAFFLE;
+        const contactMap = new Map(state.contacts.map((c) => [c.ticketKey, c]));
+        const stats = !state.isCreatingNew && getActiveRaffle() ? computeStats(getActiveRaffle()) : null;
+
+        const tq = state.adminTicketSearch.trim().toLowerCase();
+        const filteredTickets = state.tickets.filter((t) => {
+          if (state.adminTicketFilter !== 'all' && t.status !== state.adminTicketFilter) return false;
+          if (!tq) return true;
+          const fmt = formatTicketNumber(t.ticketNumber, raffle.totalTickets, raffle.startNumber);
+          const contact = contactMap.get(t.ticketKey);
+          return fmt.includes(tq) || t.holderName.toLowerCase().includes(tq) || (contact?.phone.includes(tq) ?? false);
+        });
+
+        return `
+          <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 space-y-6">
+            <div class="flex flex-col gap-4 rounded-2xl border border-stone-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p class="text-xs font-medium text-stone-500">Administrador · ${esc(state.user.email)}</p>
+                <h1 class="mt-0.5 text-xl font-bold">${state.isCreatingNew ? 'Crear nueva rifa' : esc(raffle.title)}</h1>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                ${
+                  state.raffles.length
+                    ? `<select id="admin-raffle-select" class="rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm font-medium">
+                        ${state.isCreatingNew ? '<option value="">Nueva rifa...</option>' : ''}
+                        ${state.raffles.map((r) => `<option value="${esc(r.id)}" ${!state.isCreatingNew && r.id === getActiveRaffle()?.id ? 'selected' : ''}>${esc(r.title)}</option>`).join('')}
+                      </select>`
+                    : ''
+                }
+                <button id="btn-new-raffle" type="button" class="rounded-xl bg-teal-700 px-3.5 py-2 text-sm font-semibold text-white hover:bg-teal-800 cursor-pointer">+ Nueva rifa</button>
+                <button id="btn-google-logout" type="button" class="rounded-xl border border-stone-300 bg-white px-3.5 py-2 text-sm font-medium cursor-pointer">Salir</button>
+              </div>
+            </div>
+
+            ${
+              state.adminFeedback
+                ? `<div class="rounded-xl border p-4 text-sm font-medium ${state.adminFeedback.type === 'success' ? 'border-teal-200 bg-teal-50 text-teal-900' : 'border-red-200 bg-red-50 text-red-900'}">${esc(state.adminFeedback.text)}</div>`
+                : ''
+            }
+
+            ${
+              state.confirmAction
+                ? `<div class="flex flex-col gap-3 rounded-2xl border border-red-300 bg-red-50 p-5 sm:flex-row sm:items-center sm:justify-between">
+                    <p class="text-sm font-bold text-red-900">${
+                      state.confirmAction === 'reset'
+                        ? '¿Restablecer todos los boletos de esta rifa?'
+                        : state.confirmAction === 'delete'
+                          ? '¿Eliminar esta rifa permanentemente?'
+                          : `¿Liberar el boleto #${esc(state.confirmAction.label)}?`
+                    }</p>
+                    <div class="flex gap-2">
+                      <button id="btn-cancel-confirm" type="button" class="rounded-xl border border-stone-300 bg-white px-3.5 py-2 text-xs font-semibold cursor-pointer">Cancelar</button>
+                      <button id="btn-exec-confirm" type="button" class="rounded-xl bg-red-700 px-3.5 py-2 text-xs font-semibold text-white cursor-pointer">Sí, confirmar</button>
+                    </div>
+                  </div>`
+                : ''
+            }
+
+            ${
+              stats
+                ? `<div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                    <div class="rounded-2xl border border-stone-200 bg-white p-4"><p class="text-xs text-stone-500">Ocupados</p><p class="mt-1 font-mono text-2xl font-bold tabular-nums">${stats.occupiedCount} / ${stats.total}</p></div>
+                    <div class="rounded-2xl border border-stone-200 bg-white p-4"><p class="text-xs text-stone-500">Pagados</p><p class="mt-1 font-mono text-2xl font-bold text-teal-800 tabular-nums">${stats.paidCount}</p></div>
+                    <div class="rounded-2xl border border-stone-200 bg-white p-4"><p class="text-xs text-stone-500">Recaudado</p><p class="mt-1 font-mono text-xl font-bold tabular-nums">${esc(formatMoney(stats.collectedAmount, raffle.currency))}</p></div>
+                    <div class="rounded-2xl border border-stone-200 bg-white p-4"><p class="text-xs text-stone-500">Por cobrar (${stats.reservedCount})</p><p class="mt-1 font-mono text-xl font-bold text-amber-800 tabular-nums">${esc(formatMoney(stats.pendingAmount, raffle.currency))}</p></div>
+                  </div>`
+                : ''
+            }
+
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div class="inline-flex items-center gap-1 rounded-xl bg-stone-200/70 p-1 self-start">
+                <button type="button" data-admin-tab="config" class="rounded-lg px-4 py-2 text-sm font-semibold cursor-pointer ${state.adminTab === 'config' ? 'bg-white shadow-xs' : 'text-stone-600'}">Configurar rifa</button>
+                ${!state.isCreatingNew ? `<button type="button" data-admin-tab="tickets" class="rounded-lg px-4 py-2 text-sm font-semibold cursor-pointer ${state.adminTab === 'tickets' ? 'bg-white shadow-xs' : 'text-stone-600'}">Boletos y participantes (${state.tickets.length})</button>` : ''}
+              </div>
+              ${
+                !state.isCreatingNew && getActiveRaffle()
+                  ? `<div class="flex gap-2">
+                      <button id="btn-ask-reset" type="button" class="rounded-xl border border-stone-300 bg-white px-3.5 py-2 text-xs font-semibold hover:bg-stone-100 cursor-pointer">Restablecer boletos</button>
+                      <button id="btn-ask-delete" type="button" class="rounded-xl border border-red-200 bg-white px-3.5 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 cursor-pointer">Eliminar rifa</button>
+                    </div>`
+                  : ''
+              }
+            </div>
+
+            ${
+              state.adminTab === 'config'
+                ? `<form id="admin-raffle-form" class="rounded-2xl border border-stone-200 bg-white p-6 space-y-5">
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div><label class="block text-xs font-semibold">Título de la rifa</label><input id="f-title" type="text" required value="${esc(raffle.title)}" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm" /></div>
+                      <div><label class="block text-xs font-semibold">Premio principal</label><input id="f-prize" type="text" required value="${esc(raffle.prizeName)}" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm" /></div>
+                      <div class="md:col-span-2"><label class="block text-xs font-semibold">Descripción</label><textarea id="f-desc" rows="2" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm">${esc(raffle.description)}</textarea></div>
+                      <div class="md:col-span-2"><label class="block text-xs font-semibold">URL de imagen del premio</label><input id="f-image" type="url" value="${esc(raffle.prizeImage)}" placeholder="https://..." class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm" /></div>
+                      <div><label class="block text-xs font-semibold">Precio por boleto</label><input id="f-price" type="number" min="1" step="any" required value="${esc(raffle.ticketPrice)}" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 font-mono text-sm" /></div>
+                      <div><label class="block text-xs font-semibold">Moneda</label><input id="f-currency" type="text" required value="${esc(raffle.currency)}" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm" /></div>
+                      <div><label class="block text-xs font-semibold">Total de boletos (10-1000)</label><input id="f-total" type="number" min="10" max="1000" required value="${esc(raffle.totalTickets)}" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 font-mono text-sm" /></div>
+                      <div><label class="block text-xs font-semibold">Inicia en</label><select id="f-start" class="mt-1 w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 font-mono text-sm"><option value="0" ${raffle.startNumber === 0 ? 'selected' : ''}>00</option><option value="1" ${raffle.startNumber === 1 ? 'selected' : ''}>01</option></select></div>
+                      <div><label class="block text-xs font-semibold">Fecha del sorteo</label><input id="f-date" type="text" value="${esc(raffle.drawDate)}" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm" /></div>
+                      <div><label class="block text-xs font-semibold">Lotería / Método</label><input id="f-method" type="text" value="${esc(raffle.drawMethod)}" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm" /></div>
+                      <div><label class="block text-xs font-semibold">WhatsApp organizador</label><input id="f-wa" type="tel" required value="${esc(raffle.whatsappNumber)}" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 font-mono text-sm" /></div>
+                      <div><label class="block text-xs font-semibold">Estado</label><select id="f-status" class="mt-1 w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm"><option value="active" ${raffle.status === 'active' ? 'selected' : ''}>Activa</option><option value="paused" ${raffle.status === 'paused' ? 'selected' : ''}>Pausada</option><option value="finished" ${raffle.status === 'finished' ? 'selected' : ''}>Finalizada</option></select></div>
+                      <div class="md:col-span-2"><label class="block text-xs font-semibold">Instrucciones de pago</label><textarea id="f-payment" rows="2" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm">${esc(raffle.paymentInstructions)}</textarea></div>
+                      <div><label class="block text-xs font-semibold">Boleto ganador (opcional)</label><input id="f-win-num" type="text" value="${esc(raffle.winnerNumber)}" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 font-mono text-sm" /></div>
+                      <div><label class="block text-xs font-semibold">Nombre ganador (opcional)</label><input id="f-win-name" type="text" value="${esc(raffle.winnerName)}" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm" /></div>
+                      <div class="md:col-span-2 flex items-center gap-2"><input id="f-featured" type="checkbox" ${raffle.isFeatured ? 'checked' : ''} class="h-4 w-4" /><label for="f-featured" class="text-sm font-medium">Mostrar como rifa principal</label></div>
+                    </div>
+                    <div class="flex justify-end gap-3 border-t border-stone-100 pt-4">
+                      ${state.isCreatingNew ? `<button type="button" id="btn-cancel-new" class="rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-sm font-semibold cursor-pointer">Cancelar</button>` : ''}
+                      <button type="submit" class="rounded-xl bg-[#141413] px-5 py-2.5 text-sm font-semibold text-white hover:bg-stone-800 cursor-pointer">${state.isCreatingNew ? 'Publicar nueva rifa' : 'Guardar cambios'}</button>
+                    </div>
+                  </form>`
+                : `<div class="space-y-4">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div class="inline-flex gap-1 rounded-xl bg-stone-200/70 p-1 self-start">
+                        ${[['all', 'Todos'], ['apartado', 'Apartados'], ['pagado', 'Pagados']]
+                          .map(([id, label]) => `<button type="button" data-adm-filter="${id}" class="rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer ${state.adminTicketFilter === id ? 'bg-white shadow-xs' : 'text-stone-600'}">${label}</button>`)
+                          .join('')}
+                      </div>
+                      <input id="admin-ticket-search" type="search" value="${esc(state.adminTicketSearch)}" placeholder="Buscar #, nombre o teléfono..." class="w-full sm:w-72 rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-sm" />
+                    </div>
+                    <div class="overflow-hidden rounded-2xl border border-stone-200 bg-white">
+                      <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                          <thead><tr class="border-b border-stone-200 bg-stone-50 text-xs font-semibold text-stone-600"><th class="px-4 py-3">Boleto</th><th class="px-4 py-3">Participante</th><th class="px-4 py-3">WhatsApp</th><th class="px-4 py-3">Estado</th><th class="px-4 py-3 text-right">Acciones</th></tr></thead>
+                          <tbody class="divide-y divide-stone-100">
+                            ${filteredTickets
+                              .map((t) => {
+                                const fmt = formatTicketNumber(t.ticketNumber, raffle.totalTickets, raffle.startNumber);
+                                const contact = contactMap.get(t.ticketKey);
+                                const digits = contact ? sanitizeDigits(contact.phone) : '';
+                                return `<tr>
+                                  <td class="px-4 py-3 font-mono font-bold">#${fmt}</td>
+                                  <td class="px-4 py-3"><p class="font-semibold">${esc(t.holderName)}</p><p class="text-xs text-stone-500">${esc(t.holderCity)}</p></td>
+                                  <td class="px-4 py-3 font-mono text-xs">${esc(contact?.phone || '—')}</td>
+                                  <td class="px-4 py-3 text-xs font-semibold ${t.status === 'pagado' ? 'text-teal-800' : 'text-amber-800'}">${t.status === 'pagado' ? 'Pagado' : 'Apartado'}</td>
+                                  <td class="px-4 py-3 text-right">
+                                    <div class="inline-flex gap-2">
+                                      <button type="button" data-toggle-status="${esc(t.ticketKey)}" data-next-status="${t.status === 'pagado' ? 'apartado' : 'pagado'}" class="rounded-lg px-2.5 py-1.5 text-xs font-semibold cursor-pointer ${t.status === 'pagado' ? 'border border-stone-300 bg-white' : 'bg-teal-700 text-white'}">${t.status === 'pagado' ? 'Pasar a apartado' : 'Confirmar pago'}</button>
+                                      ${digits ? `<a href="https://wa.me/${digits}" target="_blank" rel="noopener noreferrer" class="rounded-lg border border-green-300 bg-green-50 px-2.5 py-1.5 text-xs font-semibold text-green-800">WA</a>` : ''}
+                                      <button type="button" data-release-ticket="${esc(t.ticketKey)}" data-release-label="${fmt}" class="rounded-lg border border-red-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-red-700 cursor-pointer">Liberar</button>
+                                    </div>
+                                  </td>
+                                </tr>`;
+                              })
+                              .join('')}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>`
+            }
+          </div>`;
+      }
+
+      function bindAdminEvents() {
+        document.getElementById('btn-google-login')?.addEventListener('click', () => signInWithPopup(auth, googleProvider));
+        document.getElementById('btn-google-logout')?.addEventListener('click', () => signOut(auth));
+
+        document.getElementById('admin-raffle-select')?.addEventListener('change', (e) => {
+          state.isCreatingNew = false;
+          state.selectedRaffleId = e.target.value;
+          state.adminFeedback = null;
+          state.confirmAction = null;
+          attachRaffleSubListeners(state.selectedRaffleId);
+        });
+
+        document.getElementById('btn-new-raffle')?.addEventListener('click', () => {
+          state.isCreatingNew = true;
+          state.adminTab = 'config';
+          state.adminFeedback = null;
+          render();
+        });
+
+        document.getElementById('btn-cancel-new')?.addEventListener('click', () => {
+          state.isCreatingNew = false;
+          render();
+        });
+
+        document.querySelectorAll('[data-admin-tab]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            state.adminTab = btn.getAttribute('data-admin-tab');
+            render();
+          });
+        });
+
+        document.getElementById('btn-ask-reset')?.addEventListener('click', () => {
+          state.confirmAction = 'reset';
+          render();
+        });
+        document.getElementById('btn-ask-delete')?.addEventListener('click', () => {
+          state.confirmAction = 'delete';
+          render();
+        });
+        document.getElementById('btn-cancel-confirm')?.addEventListener('click', () => {
+          state.confirmAction = null;
+          render();
+        });
+
+        document.getElementById('btn-exec-confirm')?.addEventListener('click', async () => {
+          const active = getActiveRaffle();
+          if (!active || !state.confirmAction) return;
+          if (state.confirmAction === 'reset') {
+            await deleteSubcollection(active.id, 'tickets');
+            await deleteSubcollection(active.id, 'contacts');
+            const batch = writeBatch(db);
+            batch.update(doc(db, 'raffles', active.id), { winnerNumber: '', winnerName: '', status: 'active', updatedAt: serverTimestamp() });
+            await batch.commit();
+            state.adminFeedback = { type: 'success', text: 'Boletos restablecidos correctamente.' };
+          } else if (state.confirmAction === 'delete') {
+            await deleteSubcollection(active.id, 'tickets');
+            await deleteSubcollection(active.id, 'contacts');
+            const batch = writeBatch(db);
+            batch.delete(doc(db, 'raffles', active.id));
+            await batch.commit();
+            state.selectedRaffleId = '';
+            state.adminFeedback = { type: 'success', text: 'Rifa eliminada correctamente.' };
+          } else if (state.confirmAction.type === 'release') {
+            const batch = writeBatch(db);
+            batch.delete(doc(db, 'raffles', active.id, 'tickets', state.confirmAction.ticketKey));
+            batch.delete(doc(db, 'raffles', active.id, 'contacts', state.confirmAction.ticketKey));
+            await batch.commit();
+            state.adminFeedback = { type: 'success', text: `Boleto #${state.confirmAction.label} liberado.` };
+          }
+          state.confirmAction = null;
+          render();
+        });
+
+        document.getElementById('admin-raffle-form')?.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const active = getActiveRaffle();
+          const targetId = state.isCreatingNew || !active ? `rifa-${Date.now().toString(36)}` : active.id;
+          const isFeatured = document.getElementById('f-featured').checked;
+          const payload = {
+            title: document.getElementById('f-title').value.trim().slice(0, 120),
+            prizeName: document.getElementById('f-prize').value.trim().slice(0, 120),
+            description: document.getElementById('f-desc').value.trim().slice(0, 500),
+            prizeImage: document.getElementById('f-image').value.trim().slice(0, 500),
+            ticketPrice: Number(document.getElementById('f-price').value),
+            currency: document.getElementById('f-currency').value.trim().slice(0, 10) || 'MXN',
+            totalTickets: Math.min(1000, Math.max(10, parseInt(document.getElementById('f-total').value, 10) || 100)),
+            startNumber: Number(document.getElementById('f-start').value) === 1 ? 1 : 0,
+            drawDate: document.getElementById('f-date').value.trim().slice(0, 60),
+            drawMethod: document.getElementById('f-method').value.trim().slice(0, 120),
+            whatsappNumber: document.getElementById('f-wa').value.trim().slice(0, 25),
+            status: document.getElementById('f-status').value,
+            paymentInstructions: document.getElementById('f-payment').value.trim().slice(0, 400),
+            winnerNumber: document.getElementById('f-win-num').value.trim().slice(0, 10),
+            winnerName: document.getElementById('f-win-name').value.trim().slice(0, 80),
+            isFeatured,
+            updatedAt: serverTimestamp(),
+          };
+
+          const batch = writeBatch(db);
+          if (isFeatured) {
+            state.raffles.forEach((r) => {
+              if (r.id !== targetId && r.isFeatured) {
+                batch.update(doc(db, 'raffles', r.id), { isFeatured: false, updatedAt: serverTimestamp() });
+              }
+            });
+          }
+          if (state.isCreatingNew || !active) {
+            batch.set(doc(db, 'raffles', targetId), { ...payload, createdAt: serverTimestamp() });
+          } else {
+            batch.update(doc(db, 'raffles', targetId), payload);
+          }
+          await batch.commit();
+          state.isCreatingNew = false;
+          state.selectedRaffleId = targetId;
+          state.adminFeedback = { type: 'success', text: 'Rifa guardada en la nube.' };
+          render();
+        });
+
+        document.querySelectorAll('[data-adm-filter]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            state.adminTicketFilter = btn.getAttribute('data-adm-filter');
+            render();
+          });
+        });
+
+        document.getElementById('admin-ticket-search')?.addEventListener('input', (e) => {
+          state.adminTicketSearch = e.target.value;
+          render();
+          const el = document.getElementById('admin-ticket-search');
+          el?.focus();
+          el?.setSelectionRange(el.value.length, el.value.length);
+        });
+
+        document.querySelectorAll('[data-toggle-status]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const active = getActiveRaffle();
+            if (!active) return;
+            const key = btn.getAttribute('data-toggle-status');
+            const nextStatus = btn.getAttribute('data-next-status');
+            const batch = writeBatch(db);
+            batch.update(doc(db, 'raffles', active.id, 'tickets', key), {
+              status: nextStatus,
+              updatedAt: serverTimestamp(),
+            });
+            await batch.commit();
+          });
+        });
+
+        document.querySelectorAll('[data-release-ticket]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            state.confirmAction = {
+              type: 'release',
+              ticketKey: btn.getAttribute('data-release-ticket'),
+              label: btn.getAttribute('data-release-label'),
+            };
+            render();
+          });
+        });
+      }
+
+      // Navegación global
+      document.getElementById('nav-brand').addEventListener('click', () => {
+        state.view = 'public';
+        render();
+      });
+      document.getElementById('btn-toggle-view').addEventListener('click', () => {
+        state.view = state.view === 'public' ? 'admin' : 'public';
+        render();
+      });
+      document.getElementById('footer-toggle-view').addEventListener('click', () => {
+        state.view = state.view === 'public' ? 'admin' : 'public';
+        render();
+      });
+    </script>
+  </body>
+</html>
