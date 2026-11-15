@@ -8,78 +8,42 @@
       name="description"
       content="Sistema completo de rifas en la nube con apartado de boletos en tiempo real, panel de administrador y confirmación por WhatsApp."
     />
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
       body {
-        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+        background-color: #dceefb;
+        color: #141413;
       }
-      .font-mono {
-        font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+      .font-mono-custom {
+        font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
       }
-      .tabular-nums {
-        font-variant-numeric: tabular-nums;
+      .font-arial {
+        font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
       }
     </style>
   </head>
-  <body class="bg-[#F8F8F6] text-[#141413] antialiased selection:bg-teal-900 selection:text-white min-h-screen flex flex-col">
-    <!-- Top Bar -->
-    <header class="sticky top-0 z-30 border-b border-stone-200 bg-[#F8F8F6]/95 backdrop-blur-sm">
-      <div class="mx-auto flex max-w-6xl items-center justify-between gap-8 px-4 py-3.5 sm:px-6">
-        <button
-          id="nav-brand"
-          type="button"
-          class="flex items-center gap-2 text-lg font-bold tracking-tight text-[#141413] whitespace-nowrap shrink-0 cursor-pointer"
-        >
-          <span class="text-teal-700 font-mono">#</span>
-          <span>RifaStudio</span>
-        </button>
-
-        <nav aria-label="Navegación principal" class="hidden md:flex items-center gap-6 text-sm font-medium text-stone-600">
-          <button type="button" data-scroll="boletos" class="hover:text-[#141413] hover:underline underline-offset-4 whitespace-nowrap shrink-0 cursor-pointer">Boletos</button>
-          <button type="button" data-scroll="participantes" class="hover:text-[#141413] hover:underline underline-offset-4 whitespace-nowrap shrink-0 cursor-pointer">Participantes</button>
-          <button type="button" data-scroll="como-funciona" class="hover:text-[#141413] hover:underline underline-offset-4 whitespace-nowrap shrink-0 cursor-pointer">Cómo funciona</button>
-        </nav>
-
-        <div class="flex items-center shrink-0">
-          <button
-            id="btn-toggle-view"
-            type="button"
-            class="inline-flex items-center gap-2 rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-[#141413] hover:bg-stone-100 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
-          >
-            Admin
-          </button>
-        </div>
-      </div>
-    </header>
-
-    <!-- Main Container -->
-    <main id="app-root" class="flex-1 pb-16"></main>
-
-    <!-- Footer -->
-    <footer class="border-t border-stone-200 bg-white py-6">
-      <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 text-xs text-stone-500 sm:flex-row sm:px-6">
-        <p>RifaStudio · Sistema de rifas en la nube</p>
-        <button id="footer-toggle-view" type="button" class="font-medium text-stone-700 hover:text-[#141413] hover:underline underline-offset-4 cursor-pointer">
-          Acceso Administrador
-        </button>
-      </div>
-    </footer>
+  <body class="antialiased selection:bg-teal-900 selection:text-white">
+    <div
+      id="app"
+      class="min-h-screen flex flex-col bg-gradient-to-b from-[#E1F0FC] via-[#D8EBFA] to-[#CFE6F8]"
+    ></div>
 
     <script type="module">
-      import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js';
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
       import {
         getAuth,
         GoogleAuthProvider,
         onAuthStateChanged,
         signInWithPopup,
         signOut,
-      } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js';
+      } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
       import {
         collection,
         doc,
@@ -90,103 +54,269 @@
         query,
         runTransaction,
         serverTimestamp,
+        setDoc,
+        Timestamp,
         where,
         writeBatch,
-      } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
+      } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 
-      // --- Configuración de Firebase ---
-      const firebaseConfig = {
-        projectId: 'propane-cacao-4fx4d',
-        appId: '1:236087276421:web:fa8d66043d2ac92c0bcaec',
-        apiKey: 'AIzaSyCPPVW0kiVSPfzWTwfheoNZJgqGE7AMVaQ',
-        authDomain: 'propane-cacao-4fx4d.firebaseapp.com',
-        firestoreDatabaseId: 'ai-studio-1825cbaa-e9ad-47fc-8994-d7ca64869f8c',
-        storageBucket: 'propane-cacao-4fx4d.firebasestorage.app',
-        messagingSenderId: '236087276421',
+      // === CONFIGURACIÓN FIREBASE ===
+      const FIREBASE_CONFIG = {
+        projectId: "propane-cacao-4fx4d",
+        appId: "1:236087276421:web:fa8d66043d2ac92c0bcaec",
+        apiKey: "AIzaSyCPPVW0kiVSPfzWTwfheoNZJgqGE7AMVaQ",
+        authDomain: "propane-cacao-4fx4d.firebaseapp.com",
+        firestoreDatabaseId: "ai-studio-1825cbaa-e9ad-47fc-8994-d7ca64869f8c",
+        storageBucket: "propane-cacao-4fx4d.firebasestorage.app",
+        messagingSenderId: "236087276421",
       };
 
-      const PRIMARY_ADMIN_EMAIL = 'belandrialfredo@gmail.com';
-      const app = initializeApp(firebaseConfig);
-      const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+      const PRIMARY_ADMIN_EMAIL = "belandrialfredo@gmail.com";
+      const DEFAULT_BRAND_NAME = "RifaStudio";
+      const MAX_PRIZE_IMAGE_LENGTH = 300000;
+
+      const CURRENCY_OPTIONS = [
+        { code: "MXN", label: "MXN ($)" },
+        { code: "USD", label: "USD ($)" },
+        { code: "EUR", label: "EUR (€)" },
+        { code: "VES", label: "VES (Bs)" },
+        { code: "COP", label: "COP ($)" },
+        { code: "ARS", label: "ARS ($)" },
+        { code: "CLP", label: "CLP ($)" },
+        { code: "PEN", label: "PEN (S/)" },
+      ];
+
+      const DEFAULT_STARTER_RAFFLE = {
+        title: "Gran Rifa Edición Especial",
+        description:
+          "Participa apartando tus números favoritos. El ganador se define con las últimas cifras del sorteo oficial.",
+        prizeName: "Combo Tecnológico Pro (Smartphone, Laptop y Audífonos)",
+        prizeImage: "",
+        ticketPrice: 150,
+        currency: "MXN",
+        totalTickets: 100,
+        startNumber: 0,
+        drawDate: "30 de Noviembre · 20:00 h",
+        drawMethod: "Lotería Nacional",
+        whatsappNumber: "5215512345678",
+        paymentInstructions:
+          "Transferencia o pago móvil. Envía tu comprobante por WhatsApp para confirmar tus boletos como pagados.",
+        status: "active",
+        isFeatured: true,
+        winnerNumber: "",
+        winnerName: "",
+      };
+
+      const app = initializeApp(FIREBASE_CONFIG);
+      const db = getFirestore(app, FIREBASE_CONFIG.firestoreDatabaseId);
       const auth = getAuth(app);
       const googleProvider = new GoogleAuthProvider();
 
-      const DEFAULT_STARTER_RAFFLE = {
-        title: 'Gran Rifa Edición Especial',
-        description:
-          'Participa apartando tus números favoritos. El ganador se define con las últimas cifras del sorteo oficial.',
-        prizeName: 'Premio Principal Especial',
-        prizeImage: '',
-        ticketPrice: 150,
-        currency: 'MXN',
-        totalTickets: 100,
-        startNumber: 0,
-        drawDate: '30 de Noviembre · 20:00 h',
-        drawMethod: 'Lotería Nacional',
-        whatsappNumber: '5215512345678',
-        paymentInstructions:
-          'Transferencia o depósito. Envía tu comprobante por WhatsApp para confirmar tus boletos como pagados.',
-        status: 'active',
-        isFeatured: true,
-        winnerNumber: '',
-        winnerName: '',
-      };
-
-      // --- Estado global ---
+      // === ESTADO GLOBAL ===
       const state = {
-        view: 'public',
+        brandName: DEFAULT_BRAND_NAME,
+        activeView: "public",
         user: null,
         authReady: false,
         isAdmin: false,
         raffles: [],
         loadingRaffles: true,
-        selectedRaffleId: '',
+        loadError: null,
+        selectedRaffleId: "",
         tickets: [],
         contacts: [],
         selectedNumbers: [],
-        boardFilter: 'all',
-        boardSearch: '',
-        participantSearch: '',
-        inspectedTicket: null,
         receipt: null,
-        // Admin state
-        adminTab: 'config',
+        bcvRate: null,
+
+        // Tablero y verificador público
+        boardFilter: "all",
+        boardSearch: "",
+        inspectedTicket: null,
+        participantsSearch: "",
+        verifyMode: "auto",
+        verifyQuery: "",
+        verifyResult: { kind: "empty" },
+
+        // Formulario registro comprador
+        buyerName: "",
+        buyerCedula: "",
+        buyerCity: "",
+        buyerPhone: "",
+        buyerErrors: {},
+        buyerSubmitError: null,
+        buyerSubmitting: false,
+
+        // Panel Admin
+        adminTab: "config",
         isCreatingNew: false,
-        adminTicketFilter: 'all',
-        adminTicketSearch: '',
+        adminForm: { ...DEFAULT_STARTER_RAFFLE },
+        adminErrors: {},
         adminFeedback: null,
-        confirmAction: null,
-        unsubTickets: null,
-        unsubContacts: null,
+        adminConfirm: null,
+        adminSaving: false,
+        adminActionBusy: false,
+        adminImageBusy: false,
+        adminTicketFilter: "all",
+        adminTicketSearch: "",
+        brandDraft: DEFAULT_BRAND_NAME,
+        brandError: null,
+        brandSaving: false,
       };
 
-      // --- Utilidades ---
+      let unsubTickets = null;
+      let unsubContacts = null;
+
+      // === UTILIDADES PURAS ===
       function esc(str) {
-        return String(str ?? '')
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&#39;');
+        return String(str ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function safeImageSrc(url) {
+        const t = String(url || "").trim();
+        if (
+          t.startsWith("https://") ||
+          t.startsWith("http://") ||
+          t.startsWith("data:image/")
+        ) {
+          return t;
+        }
+        return "";
+      }
+
+      function toDate(val) {
+        if (val instanceof Timestamp) return val.toDate();
+        if (val instanceof Date) return val;
+        if (val && typeof val.toDate === "function") return val.toDate();
+        return null;
+      }
+
+      function getPadLength(totalTickets, startNumber) {
+        const maxNum = Math.max(startNumber + totalTickets - 1, 0);
+        return Math.max(2, String(maxNum).length);
       }
 
       function formatTicketNumber(num, totalTickets, startNumber = 0) {
-        const maxNum = Math.max(startNumber + totalTickets - 1, 0);
-        const pad = Math.max(2, String(maxNum).length);
-        return String(num).padStart(pad, '0');
+        return String(num).padStart(getPadLength(totalTickets, startNumber), "0");
       }
 
-      function formatMoney(amount, currency = 'MXN') {
-        const symbol = currency === 'EUR' ? '€' : currency === 'PEN' ? 'S/' : '$';
-        const formatted = new Intl.NumberFormat('es-MX', {
+      function formatMoney(amount, currency = "MXN") {
+        const cur = String(currency || "MXN").toUpperCase();
+        if (cur === "VES" || cur === "BS") return formatBolivares(amount);
+        const symbol = cur === "EUR" ? "€" : cur === "PEN" ? "S/" : "$";
+        const formatted = new Intl.NumberFormat("es-MX", {
           minimumFractionDigits: amount % 1 === 0 ? 0 : 2,
           maximumFractionDigits: 2,
         }).format(amount);
         return `${symbol}${formatted} ${currency}`;
       }
 
-      function sanitizeDigits(phone) {
-        return String(phone ?? '').replace(/\D/g, '');
+      function formatBolivares(amountBs) {
+        const safe = Number.isFinite(amountBs) ? Math.max(0, amountBs) : 0;
+        const [intPart, decPart] = safe.toFixed(2).split(".");
+        const withThousands = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        return `${withThousands},${decPart}Bs`;
+      }
+
+      function convertToBolivares(amount, currency, rateInfo) {
+        if (!Number.isFinite(amount) || amount < 0) return null;
+        const cur = String(currency || "USD").trim().toUpperCase();
+        if (cur === "VES" || cur === "BS") return amount;
+        if (!rateInfo || !Number.isFinite(rateInfo.usdToBs) || rateInfo.usdToBs <= 0) {
+          return null;
+        }
+        if (cur === "USD") return amount * rateInfo.usdToBs;
+        if (cur === "EUR") {
+          if (rateInfo.eurToBs && rateInfo.eurToBs > 0) return amount * rateInfo.eurToBs;
+          const perUsd = rateInfo.usdRates?.EUR;
+          return perUsd > 0 ? (amount / perUsd) * rateInfo.usdToBs : null;
+        }
+        const perUsd = rateInfo.usdRates?.[cur];
+        return perUsd > 0 ? (amount / perUsd) * rateInfo.usdToBs : null;
+      }
+
+      function formatReservationDateParts(date) {
+        if (!(date instanceof Date) || Number.isNaN(date.getTime())) return null;
+        return {
+          date: new Intl.DateTimeFormat("es-VE", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          }).format(date),
+          time: new Intl.DateTimeFormat("es-VE", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+          }).format(date),
+        };
+      }
+
+      function formatReservationDateTime(date) {
+        const p = formatReservationDateParts(date);
+        return p ? `${p.date} · ${p.time}` : "—";
+      }
+
+      function sanitizePhoneDigits(phone) {
+        return String(phone || "").replace(/\D/g, "");
+      }
+
+      function normalizeCedulaDigits(cedula) {
+        return String(cedula || "").replace(/\D/g, "");
+      }
+
+      async function hashCedula(cedula) {
+        const digits = normalizeCedulaDigits(cedula);
+        const data = new TextEncoder().encode(`rifaclara-cedula:${digits}`);
+        const digest = await crypto.subtle.digest("SHA-256", data);
+        return Array.from(new Uint8Array(digest))
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("");
+      }
+
+      function getActiveRaffle() {
+        if (state.raffles.length === 0) return null;
+        if (state.selectedRaffleId) {
+          const found = state.raffles.find((r) => r.id === state.selectedRaffleId);
+          if (found) return found;
+        }
+        return state.raffles.find((r) => r.isFeatured) || state.raffles[0];
+      }
+
+      function calculateStats(raffle, tickets) {
+        if (!raffle) {
+          return {
+            total: 0,
+            availableCount: 0,
+            reservedCount: 0,
+            paidCount: 0,
+            occupiedCount: 0,
+            soldPercentage: 0,
+            collectedAmount: 0,
+            pendingAmount: 0,
+          };
+        }
+        const total = Math.max(0, raffle.totalTickets);
+        const price = Math.max(0, raffle.ticketPrice);
+        const reservedCount = tickets.filter((t) => t.status === "apartado").length;
+        const paidCount = tickets.filter((t) => t.status === "pagado").length;
+        const occupiedCount = Math.min(total, reservedCount + paidCount);
+        const availableCount = Math.max(0, total - occupiedCount);
+        const soldPercentage = total > 0 ? Math.round((occupiedCount / total) * 100) : 0;
+        return {
+          total,
+          availableCount,
+          reservedCount,
+          paidCount,
+          occupiedCount,
+          soldPercentage,
+          collectedAmount: paidCount * price,
+          pendingAmount: reservedCount * price,
+        };
       }
 
       function buildWhatsAppUrl({
@@ -196,213 +326,144 @@
         totalTickets,
         startNumber,
         totalAmount,
+        totalAmountBs,
         currency,
         holderName,
+        holderCedula,
         holderCity,
       }) {
-        const digits = sanitizeDigits(whatsappPhone);
+        const digits = sanitizePhoneDigits(whatsappPhone);
         const formattedTickets = ticketNumbers
           .slice()
           .sort((a, b) => a - b)
           .map((n) => formatTicketNumber(n, totalTickets, startNumber))
-          .join(', ');
-        const cityPart = holderCity?.trim() ? ` (${holderCity.trim()})` : '';
-        const msg = [
+          .join(", ");
+        const cityPart = holderCity?.trim() ? ` (${holderCity.trim()})` : "";
+        const cur = String(currency || "").trim().toUpperCase();
+        const bsSuffix =
+          totalAmountBs != null &&
+          Number.isFinite(totalAmountBs) &&
+          cur !== "VES" &&
+          cur !== "BS"
+            ? ` (Ref. BCV: ${formatBolivares(totalAmountBs)})`
+            : "";
+        const lines = [
           `Hola, quiero concretar mi compra en *${raffleTitle.trim()}*.`,
           `• Participante: ${holderName.trim()}${cityPart}`,
-          `• Boletos apartados: ${formattedTickets}`,
-          `• Total a pagar: ${formatMoney(totalAmount, currency)}`,
-        ].join('\n');
-        return `https://wa.me/${digits}?text=${encodeURIComponent(msg)}`;
+        ];
+        if (holderCedula?.trim()) lines.push(`• Cédula: ${holderCedula.trim()}`);
+        lines.push(`• Boletos apartados: ${formattedTickets}`);
+        lines.push(`• Total a pagar: ${formatMoney(totalAmount, currency)}${bsSuffix}`);
+        return `https://wa.me/${digits}?text=${encodeURIComponent(lines.join("\n"))}`;
       }
 
-      function getActiveRaffle() {
-        if (!state.raffles.length) return null;
-        if (state.selectedRaffleId) {
-          const match = state.raffles.find((r) => r.id === state.selectedRaffleId);
-          if (match) return match;
+      async function compressGalleryImage(file) {
+        if (!file.type.startsWith("image/")) {
+          throw new Error("El archivo seleccionado no es una imagen válida.");
         }
-        return state.raffles.find((r) => r.isFeatured) || state.raffles[0];
-      }
-
-      function computeStats(raffle) {
-        const total = raffle.totalTickets;
-        const reservedCount = state.tickets.filter((t) => t.status === 'apartado').length;
-        const paidCount = state.tickets.filter((t) => t.status === 'pagado').length;
-        const occupiedCount = Math.min(total, reservedCount + paidCount);
-        const availableCount = Math.max(0, total - occupiedCount);
-        const soldPercentage = total > 0 ? Math.round((occupiedCount / total) * 100) : 0;
-        return {
-          total,
-          reservedCount,
-          paidCount,
-          occupiedCount,
-          availableCount,
-          soldPercentage,
-          collectedAmount: paidCount * raffle.ticketPrice,
-          pendingAmount: reservedCount * raffle.ticketPrice,
-        };
-      }
-
-      function groupParticipants(tickets) {
-        const map = new Map();
-        for (const t of tickets) {
-          const key = `${t.holderName.trim().toLowerCase()}__${t.holderCity.trim().toLowerCase()}`;
-          const ts = t.createdAt ? t.createdAt.getTime() : 0;
-          if (map.has(key)) {
-            const g = map.get(key);
-            g.tickets.push(t);
-            if (t.status === 'pagado') g.paidCount++;
-            else g.reservedCount++;
-            if (ts > g.latestDate) g.latestDate = ts;
-          } else {
-            map.set(key, {
-              key,
-              holderName: t.holderName,
-              holderCity: t.holderCity,
-              tickets: [t],
-              paidCount: t.status === 'pagado' ? 1 : 0,
-              reservedCount: t.status === 'apartado' ? 1 : 0,
-              latestDate: ts,
-            });
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ""));
+          reader.onerror = () => reject(new Error("No se pudo leer la imagen."));
+          reader.readAsDataURL(file);
+        });
+        const img = await new Promise((resolve, reject) => {
+          const image = new Image();
+          image.onload = () => resolve(image);
+          image.onerror = () => reject(new Error("No se pudo procesar la imagen."));
+          image.src = dataUrl;
+        });
+        const targetLimit = 260000;
+        const attempts = [
+          { maxDim: 960, quality: 0.82 },
+          { maxDim: 800, quality: 0.72 },
+          { maxDim: 640, quality: 0.6 },
+          { maxDim: 480, quality: 0.48 },
+        ];
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        for (const attempt of attempts) {
+          const w0 = img.naturalWidth || img.width;
+          const h0 = img.naturalHeight || img.height;
+          let w = w0;
+          let h = h0;
+          if (w0 > attempt.maxDim || h0 > attempt.maxDim) {
+            const scale = attempt.maxDim / Math.max(w0, h0);
+            w = Math.max(1, Math.round(w0 * scale));
+            h = Math.max(1, Math.round(h0 * scale));
           }
+          canvas.width = w;
+          canvas.height = h;
+          ctx.fillStyle = "#FFFFFF";
+          ctx.fillRect(0, 0, w, h);
+          ctx.drawImage(img, 0, 0, w, h);
+          const compressed = canvas.toDataURL("image/jpeg", attempt.quality);
+          if (compressed.length <= targetLimit) return compressed;
         }
-        return Array.from(map.values())
-          .map((g) => ({
-            ...g,
-            tickets: g.tickets.slice().sort((a, b) => a.ticketNumber - b.ticketNumber),
-          }))
-          .sort((a, b) => b.latestDate - a.latestDate);
+        throw new Error("La imagen es demasiado grande incluso comprimida.");
       }
 
-      // --- Firestore Listeners ---
-      async function ensureStarterRaffle() {
-        const ref = doc(db, 'raffles', 'rifa-principal');
-        await runTransaction(db, async (tx) => {
-          const snap = await tx.get(ref);
-          if (snap.exists()) return;
-          tx.set(ref, {
-            ...DEFAULT_STARTER_RAFFLE,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          });
-        });
+      // === TASA BCV AUTOMÁTICA ===
+      async function loadBcvRate() {
+        const fetchJson = async (url) => {
+          const ctrl = new AbortController();
+          const t = setTimeout(() => ctrl.abort(), 6000);
+          try {
+            const res = await fetch(url, { signal: ctrl.signal });
+            return res.ok ? await res.json() : null;
+          } catch {
+            return null;
+          } finally {
+            clearTimeout(t);
+          }
+        };
+        const [usdOficial, eurOficial, fxRes] = await Promise.all([
+          fetchJson("https://ve.dolarapi.com/v1/dolares/oficial"),
+          fetchJson("https://ve.dolarapi.com/v1/euros/oficial"),
+          fetchJson("https://open.er-api.com/v6/latest/USD"),
+        ]);
+        const usdRates = fxRes?.result === "success" && fxRes.rates ? fxRes.rates : {};
+        const bcvUsd =
+          typeof usdOficial?.promedio === "number" && usdOficial.promedio > 0
+            ? usdOficial.promedio
+            : typeof usdRates.VES === "number" && usdRates.VES > 0
+              ? usdRates.VES
+              : 0;
+        if (bcvUsd > 0) {
+          state.bcvRate = {
+            usdToBs: bcvUsd,
+            eurToBs:
+              typeof eurOficial?.promedio === "number" && eurOficial.promedio > 0
+                ? eurOficial.promedio
+                : null,
+            usdRates,
+          };
+          render();
+        }
       }
 
-      function attachRaffleSubListeners(raffleId) {
-        if (state.unsubTickets) state.unsubTickets();
-        if (state.unsubContacts) state.unsubContacts();
-        state.unsubTickets = null;
-        state.unsubContacts = null;
-
-        if (!raffleId) {
-          state.tickets = [];
-          state.contacts = [];
-          render();
-          return;
-        }
-
-        const tq = query(
-          collection(db, `raffles/${raffleId}/tickets`),
-          where('status', 'in', ['apartado', 'pagado'])
-        );
-        state.unsubTickets = onSnapshot(tq, (snap) => {
-          state.tickets = snap.docs
-            .map((d) => {
-              const data = d.data();
-              return {
-                raffleId,
-                ticketKey: d.id,
-                ticketNumber: Number(data.ticketNumber ?? d.id),
-                holderName: String(data.holderName ?? ''),
-                holderCity: String(data.holderCity ?? ''),
-                status: data.status === 'pagado' ? 'pagado' : 'apartado',
-                createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : null,
-              };
-            })
-            .sort((a, b) => a.ticketNumber - b.ticketNumber);
-
-          const taken = new Set(state.tickets.map((t) => t.ticketNumber));
-          state.selectedNumbers = state.selectedNumbers.filter((n) => !taken.has(n));
-          render();
-        });
-
-        if (state.isAdmin) {
-          state.unsubContacts = onSnapshot(
-            collection(db, `raffles/${raffleId}/contacts`),
-            (snap) => {
-              state.contacts = snap.docs.map((d) => {
-                const data = d.data();
-                return {
-                  ticketKey: d.id,
-                  holderName: String(data.holderName ?? ''),
-                  phone: String(data.phone ?? ''),
-                };
-              });
-              render();
-            }
-          );
+      // === SUSCRIPCIONES FIRESTORE ===
+      onSnapshot(doc(db, "settings", "branding"), (snap) => {
+        if (snap.exists()) {
+          const raw = String(snap.data().brandName || "").trim();
+          state.brandName = raw.length >= 2 ? raw : DEFAULT_BRAND_NAME;
         } else {
-          state.contacts = [];
+          state.brandName = DEFAULT_BRAND_NAME;
         }
-      }
-
-      let seededOnce = false;
-      const rq = query(
-        collection(db, 'raffles'),
-        where('status', 'in', ['active', 'paused', 'finished'])
-      );
-      onSnapshot(rq, (snap) => {
-        if (snap.empty && !seededOnce) {
-          seededOnce = true;
-          ensureStarterRaffle().catch(console.error);
-          return;
-        }
-        const prevActiveId = getActiveRaffle()?.id;
-        state.raffles = snap.docs
-          .map((d) => {
-            const data = d.data();
-            return {
-              id: d.id,
-              title: String(data.title ?? ''),
-              description: String(data.description ?? ''),
-              prizeName: String(data.prizeName ?? ''),
-              prizeImage: String(data.prizeImage ?? ''),
-              ticketPrice: Number(data.ticketPrice ?? 0),
-              currency: String(data.currency ?? 'MXN'),
-              totalTickets: Number(data.totalTickets ?? 100),
-              startNumber: Number(data.startNumber) === 1 ? 1 : 0,
-              drawDate: String(data.drawDate ?? ''),
-              drawMethod: String(data.drawMethod ?? ''),
-              whatsappNumber: String(data.whatsappNumber ?? ''),
-              paymentInstructions: String(data.paymentInstructions ?? ''),
-              status: ['paused', 'finished'].includes(data.status) ? data.status : 'active',
-              isFeatured: Boolean(data.isFeatured),
-              winnerNumber: String(data.winnerNumber ?? ''),
-              winnerName: String(data.winnerName ?? ''),
-              createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : null,
-            };
-          })
-          .sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
-        state.loadingRaffles = false;
-
-        const nextActiveId = getActiveRaffle()?.id;
-        if (nextActiveId !== prevActiveId || !state.unsubTickets) {
-          attachRaffleSubListeners(nextActiveId);
-        } else {
-          render();
-        }
+        state.brandDraft = state.brandName;
+        document.title = `${state.brandName} — Sistema de Rifas`;
+        render();
       });
 
-      onAuthStateChanged(auth, async (user) => {
-        state.user = user;
-        if (user && user.emailVerified) {
-          if (user.email === PRIMARY_ADMIN_EMAIL) {
+      onAuthStateChanged(auth, async (nextUser) => {
+        state.user = nextUser;
+        if (nextUser && nextUser.emailVerified) {
+          if (nextUser.email === PRIMARY_ADMIN_EMAIL) {
             state.isAdmin = true;
           } else {
             try {
-              const adminSnap = await getDoc(doc(db, 'admins', user.uid));
-              state.isAdmin = adminSnap.exists();
+              const snap = await getDoc(doc(db, "admins", nextUser.uid));
+              state.isAdmin = snap.exists();
             } catch {
               state.isAdmin = false;
             }
@@ -411,164 +472,466 @@
           state.isAdmin = false;
         }
         state.authReady = true;
-        attachRaffleSubListeners(getActiveRaffle()?.id);
+        attachContactsSubscription();
         render();
       });
 
-      // --- Acciones de Firestore ---
-      async function reserveTickets(holderName, holderCity, phone) {
-        const raffle = getActiveRaffle();
-        if (!raffle) return;
-        const nums = state.selectedNumbers.slice().sort((a, b) => a - b);
-        if (!nums.length) throw new Error('Selecciona al menos un boleto disponible.');
-        if (nums.length > 25) throw new Error('Máximo 25 boletos por apartado.');
-
-        await runTransaction(db, async (tx) => {
-          const refs = nums.map((num) => ({
-            num,
-            key: String(num),
-            ticketRef: doc(db, 'raffles', raffle.id, 'tickets', String(num)),
-            contactRef: doc(db, 'raffles', raffle.id, 'contacts', String(num)),
-          }));
-          const snaps = await Promise.all(refs.map((r) => tx.get(r.ticketRef)));
-          for (let i = 0; i < snaps.length; i++) {
-            if (snaps[i].exists()) {
-              const fmt = formatTicketNumber(refs[i].num, raffle.totalTickets, raffle.startNumber);
-              throw new Error(`El boleto #${fmt} acaba de ser apartado por otra persona.`);
+      let seededOnce = false;
+      onSnapshot(
+        query(collection(db, "raffles"), where("status", "in", ["active", "paused", "finished"])),
+        async (snapshot) => {
+          if (snapshot.empty && !seededOnce) {
+            seededOnce = true;
+            try {
+              await runTransaction(db, async (tx) => {
+                const ref = doc(db, "raffles", "rifa-principal");
+                const cur = await tx.get(ref);
+                if (!cur.exists()) {
+                  tx.set(ref, {
+                    ...DEFAULT_STARTER_RAFFLE,
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp(),
+                  });
+                }
+              });
+            } catch (err) {
+              state.loadError = err.message;
+              state.loadingRaffles = false;
+              render();
             }
+            return;
           }
-          for (const item of refs) {
-            tx.set(item.ticketRef, {
-              raffleId: raffle.id,
-              ticketKey: item.key,
-              ticketNumber: item.num,
-              holderName: holderName.trim().slice(0, 80),
-              holderCity: holderCity.trim().slice(0, 60),
-              status: 'apartado',
-              createdAt: serverTimestamp(),
-              updatedAt: serverTimestamp(),
-            });
-            tx.set(item.contactRef, {
-              raffleId: raffle.id,
-              ticketKey: item.key,
-              holderName: holderName.trim().slice(0, 80),
-              phone: phone.trim().slice(0, 25),
-              createdAt: serverTimestamp(),
-            });
+          state.raffles = snapshot.docs
+            .map((d) => {
+              const data = d.data();
+              return {
+                id: d.id,
+                title: String(data.title || ""),
+                description: String(data.description || ""),
+                prizeName: String(data.prizeName || ""),
+                prizeImage: String(data.prizeImage || ""),
+                ticketPrice: Number(data.ticketPrice || 0),
+                currency: String(data.currency || "MXN"),
+                totalTickets: Number(data.totalTickets || 100),
+                startNumber: Number(data.startNumber) === 1 ? 1 : 0,
+                drawDate: String(data.drawDate || ""),
+                drawMethod: String(data.drawMethod || ""),
+                whatsappNumber: String(data.whatsappNumber || ""),
+                paymentInstructions: String(data.paymentInstructions || ""),
+                status: ["paused", "finished"].includes(data.status) ? data.status : "active",
+                isFeatured: Boolean(data.isFeatured),
+                winnerNumber: String(data.winnerNumber || ""),
+                winnerName: String(data.winnerName || ""),
+                createdAt: toDate(data.createdAt),
+                updatedAt: toDate(data.updatedAt),
+              };
+            })
+            .sort(
+              (a, b) =>
+                (b.createdAt ? b.createdAt.getTime() : 0) -
+                (a.createdAt ? a.createdAt.getTime() : 0)
+            );
+          state.loadingRaffles = false;
+          state.loadError = null;
+          if (!state.isCreatingNew) {
+            const active = getActiveRaffle();
+            if (active) state.adminForm = { ...active };
           }
-        });
+          attachRaffleSubcollections();
+          render();
+        },
+        (err) => {
+          state.loadError = err.message;
+          state.loadingRaffles = false;
+          render();
+        }
+      );
 
-        const totalAmount = nums.length * raffle.ticketPrice;
-        state.receipt = {
-          raffleTitle: raffle.title,
-          holderName: holderName.trim(),
-          formattedNumbers: nums.map((n) => formatTicketNumber(n, raffle.totalTickets, raffle.startNumber)),
-          totalAmount,
-          currency: raffle.currency,
-          paymentInstructions: raffle.paymentInstructions,
-          whatsappUrl: buildWhatsAppUrl({
-            whatsappPhone: raffle.whatsappNumber,
-            raffleTitle: raffle.title,
-            ticketNumbers: nums,
-            totalTickets: raffle.totalTickets,
-            startNumber: raffle.startNumber,
-            totalAmount,
-            currency: raffle.currency,
-            holderName,
-            holderCity,
-          }),
-        };
-        state.selectedNumbers = [];
-        render();
+      let subscribedRaffleId = "";
+      function attachRaffleSubcollections() {
+        const active = getActiveRaffle();
+        const nextId = active ? active.id : "";
+        if (nextId === subscribedRaffleId) return;
+        subscribedRaffleId = nextId;
+        if (unsubTickets) {
+          unsubTickets();
+          unsubTickets = null;
+        }
+        state.tickets = [];
+        if (nextId) {
+          unsubTickets = onSnapshot(
+            query(
+              collection(db, `raffles/${nextId}/tickets`),
+              where("status", "in", ["apartado", "pagado"])
+            ),
+            (snap) => {
+              state.tickets = snap.docs
+                .map((d) => {
+                  const data = d.data({ serverTimestamps: "estimate" });
+                  return {
+                    raffleId: nextId,
+                    ticketKey: d.id,
+                    ticketNumber: Number(data.ticketNumber ?? Number(d.id)),
+                    holderName: String(data.holderName || ""),
+                    holderCity: String(data.holderCity || ""),
+                    holderCedulaHash: data.holderCedulaHash
+                      ? String(data.holderCedulaHash)
+                      : undefined,
+                    status: data.status === "pagado" ? "pagado" : "apartado",
+                    createdAt: toDate(data.createdAt),
+                    updatedAt: toDate(data.updatedAt),
+                  };
+                })
+                .sort((a, b) => a.ticketNumber - b.ticketNumber);
+              const taken = new Set(state.tickets.map((t) => t.ticketNumber));
+              state.selectedNumbers = state.selectedNumbers.filter((n) => !taken.has(n));
+              render();
+            }
+          );
+        }
+        attachContactsSubscription();
       }
 
-      async function deleteSubcollection(raffleId, sub) {
-        const snap = await getDocs(collection(db, `raffles/${raffleId}/${sub}`));
-        const docs = snap.docs;
-        for (let i = 0; i < docs.length; i += 400) {
-          const batch = writeBatch(db);
-          docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
-          await batch.commit();
+      function attachContactsSubscription() {
+        if (unsubContacts) {
+          unsubContacts();
+          unsubContacts = null;
         }
-      }
-
-      // --- Renderizado UI ---
-      function render() {
-        const root = document.getElementById('app-root');
-        const toggleBtn = document.getElementById('btn-toggle-view');
-        const footerBtn = document.getElementById('footer-toggle-view');
-
-        if (state.view === 'admin') {
-          toggleBtn.textContent = 'Ver Rifa';
-          footerBtn.textContent = 'Volver a la rifa';
-          root.innerHTML = renderAdminView();
-          bindAdminEvents();
+        const active = getActiveRaffle();
+        if (!state.isAdmin || !active) {
+          state.contacts = [];
           return;
         }
-
-        toggleBtn.textContent = state.isAdmin ? 'Panel Admin' : 'Admin';
-        footerBtn.textContent = 'Acceso Administrador';
-
-        if (state.loadingRaffles) {
-          root.innerHTML = `<div class="mx-auto max-w-6xl px-4 py-12 text-center text-sm text-stone-500">Cargando rifa en la nube...</div>`;
-          return;
-        }
-
-        const raffle = getActiveRaffle();
-        if (!raffle) {
-          root.innerHTML = `
-            <div class="mx-auto max-w-2xl px-4 py-20 text-center">
-              <h1 class="text-2xl font-bold">No hay rifas publicadas</h1>
-              <p class="mt-2 text-sm text-stone-600">Entra al Panel Admin para crear tu primera rifa.</p>
-              <button id="empty-go-admin" type="button" class="mt-6 rounded-xl bg-[#141413] px-5 py-3 text-sm font-semibold text-white cursor-pointer">Ir al Panel Admin</button>
-            </div>`;
-          document.getElementById('empty-go-admin')?.addEventListener('click', () => {
-            state.view = 'admin';
+        unsubContacts = onSnapshot(
+          collection(db, `raffles/${active.id}/contacts`),
+          (snap) => {
+            state.contacts = snap.docs.map((d) => {
+              const data = d.data({ serverTimestamps: "estimate" });
+              return {
+                raffleId: active.id,
+                ticketKey: d.id,
+                holderName: String(data.holderName || ""),
+                holderCedula: data.holderCedula ? String(data.holderCedula) : undefined,
+                phone: String(data.phone || ""),
+                createdAt: toDate(data.createdAt),
+              };
+            });
             render();
-          });
-          return;
+          },
+          () => {
+            state.contacts = [];
+          }
+        );
+      }
+
+      // === RENDERIZADO PRINCIPAL ===
+      function render() {
+        const activeRaffle = getActiveRaffle();
+        const stats = calculateStats(activeRaffle, state.tickets);
+        const root = document.getElementById("app");
+
+        root.innerHTML = `
+          ${renderNavbar()}
+          ${
+            state.activeView === "admin"
+              ? renderAdminPanel(activeRaffle, stats)
+              : renderPublicView(activeRaffle, stats)
+          }
+          ${renderMobileStickyBar(activeRaffle)}
+          <footer class="border-t border-sky-200/80 bg-white py-6">
+            <div class="mx-auto max-w-6xl px-4 text-center text-xs leading-relaxed text-stone-500 sm:px-6">
+              <p>Sistema de Rifas</p>
+              <p>Desarrollado por Alfredo Belandria</p>
+            </div>
+          </footer>
+        `;
+
+        bindEvents(activeRaffle);
+      }
+
+      function renderNavbar() {
+        return `
+          <header class="sticky top-0 z-30 border-b border-sky-200/90 bg-[#E1F0FC]/90 backdrop-blur-sm">
+            <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3.5 sm:gap-8 sm:px-6">
+              <button type="button" data-action="go-public" class="flex items-center gap-2 text-lg font-bold tracking-tight text-[#141413] whitespace-nowrap shrink-0 cursor-pointer">
+                <span class="text-teal-700">🎟️</span>
+                <span class="truncate max-w-[180px] sm:max-w-[260px]">${esc(state.brandName)}</span>
+              </button>
+              <nav class="hidden md:flex items-center gap-6 text-sm font-medium text-stone-600">
+                <button type="button" data-scroll="boletos" class="hover:text-[#141413] hover:underline underline-offset-4 cursor-pointer">Boletos</button>
+                <button type="button" data-scroll="verificar" class="hover:text-[#141413] hover:underline underline-offset-4 cursor-pointer">Verificar</button>
+                <button type="button" data-scroll="participantes" class="hover:text-[#141413] hover:underline underline-offset-4 cursor-pointer">Participantes</button>
+                <button type="button" data-scroll="como-funciona" class="hover:text-[#141413] hover:underline underline-offset-4 cursor-pointer">Cómo funciona</button>
+              </nav>
+              <div class="flex items-center shrink-0">
+                ${
+                  state.activeView === "public"
+                    ? `<button type="button" data-action="go-admin" class="inline-flex items-center gap-2 rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-[#141413] hover:bg-stone-100 cursor-pointer">${state.isAdmin ? "Panel Admin" : "Admin"}</button>`
+                    : `<button type="button" data-action="go-public" class="inline-flex items-center gap-2 rounded-lg bg-[#141413] px-4 py-2 text-sm font-medium text-white hover:bg-stone-800 cursor-pointer">Ver Rifa</button>`
+                }
+              </div>
+            </div>
+          </header>
+        `;
+      }
+
+      function renderPublicView(raffle, stats) {
+        if (state.loadingRaffles) {
+          return `<main class="flex-1 mx-auto max-w-6xl w-full px-4 py-12 sm:px-6"><div class="h-80 rounded-2xl bg-white/70 animate-pulse"></div></main>`;
+        }
+        if (!raffle) {
+          return `
+            <main class="flex-1 mx-auto max-w-2xl px-4 py-20 text-center sm:px-6">
+              <h1 class="text-2xl font-bold">No hay rifas publicadas en este momento</h1>
+              <p class="mt-2 text-sm text-stone-600">El administrador puede crear una nueva rifa desde el Panel Admin.</p>
+              <button type="button" data-action="go-admin" class="mt-6 rounded-xl bg-[#141413] px-5 py-3 text-sm font-semibold text-white cursor-pointer">Ir al Panel Admin</button>
+            </main>
+          `;
         }
 
-        const stats = computeStats(raffle);
+        const curUpper = raffle.currency.trim().toUpperCase();
+        const showBs = curUpper !== "VES" && curUpper !== "BS";
+        const ticketBs = showBs ? convertToBolivares(raffle.ticketPrice, raffle.currency, state.bcvRate) : null;
+        const imgSrc = safeImageSrc(raffle.prizeImage);
+
+        return `
+          <main class="flex-1 pb-20 lg:pb-12">
+            ${
+              state.raffles.length > 1
+                ? `<div class="mx-auto max-w-6xl px-4 pt-5 sm:px-6">
+                    <div class="flex flex-wrap items-center gap-2 text-xs text-stone-600">
+                      <span class="font-medium">Rifas disponibles:</span>
+                      ${state.raffles
+                        .map(
+                          (r) => `<button type="button" data-select-raffle="${esc(r.id)}" class="rounded-lg px-3 py-1.5 font-semibold cursor-pointer ${r.id === raffle.id ? "bg-[#141413] text-white" : "bg-white border border-stone-200 text-[#141413] hover:bg-stone-100"}">${esc(r.title)}</button>`
+                        )
+                        .join("")}
+                    </div>
+                  </div>`
+                : ""
+            }
+
+            <!-- HERO -->
+            <section class="mx-auto max-w-6xl px-4 pt-6 pb-8 sm:px-6 sm:pt-10 sm:pb-10">
+              <div class="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-stretch">
+                <div class="lg:col-span-6">
+                  <div class="relative h-64 sm:h-80 lg:h-full lg:min-h-[340px] lg:max-h-[430px] w-full overflow-hidden rounded-2xl border border-stone-200 bg-stone-100">
+                    ${
+                      imgSrc
+                        ? `<img src="${esc(imgSrc)}" alt="${esc(raffle.prizeName)}" referrerpolicy="no-referrer" class="h-full w-full object-cover" />`
+                        : `<div class="flex h-full w-full flex-col items-center justify-center bg-gradient-to-br from-stone-100 to-stone-200 p-6 text-center">
+                            <span class="text-4xl mb-2">🎁</span>
+                            <p class="text-base font-semibold">${esc(raffle.prizeName)}</p>
+                          </div>`
+                    }
+                  </div>
+                </div>
+                <div class="flex flex-col justify-between rounded-2xl border border-stone-200 bg-white p-6 sm:p-8 lg:col-span-6">
+                  <div>
+                    <div class="flex flex-wrap items-center gap-2 text-xs font-medium text-stone-500">
+                      <span class="text-teal-800 font-semibold">${raffle.status === "active" ? "Rifa activa" : raffle.status === "paused" ? "Apartados pausados" : "Sorteo finalizado"}</span>
+                      <span>·</span>
+                      <span class="tabular-nums">${stats.total} boletos</span>
+                      ${raffle.drawMethod ? `<span>·</span><span>${esc(raffle.drawMethod)}</span>` : ""}
+                    </div>
+                    <h1 class="mt-3 text-2xl font-bold tracking-tight sm:text-4xl">${esc(raffle.title)}</h1>
+                    <p class="mt-2 text-base font-medium text-teal-800">Premio: ${esc(raffle.prizeName)}</p>
+                    ${raffle.description ? `<p class="mt-3 text-sm leading-relaxed text-stone-600">${esc(raffle.description)}</p>` : ""}
+                    ${
+                      raffle.status === "finished" && raffle.winnerNumber
+                        ? `<div class="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-4">
+                            <p class="text-xs font-semibold text-amber-900">Boleto ganador #${esc(raffle.winnerNumber)}</p>
+                            <p class="text-sm font-bold">${esc(raffle.winnerName || "Ganador confirmado")}</p>
+                          </div>`
+                        : ""
+                    }
+                  </div>
+                  <div class="mt-6 space-y-5 border-t border-stone-100 pt-5">
+                    <div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                      <div>
+                        <p class="text-xs text-stone-500">Boleto</p>
+                        <p class="mt-0.5 font-arial text-xl font-bold tracking-tight tabular-nums sm:text-2xl">${esc(formatMoney(raffle.ticketPrice, raffle.currency))}</p>
+                        ${
+                          ticketBs !== null
+                            ? `<p class="mt-0.5 font-mono-custom text-xs font-semibold text-[#489B22] tabular-nums">${esc(formatBolivares(ticketBs))} <span class="font-sans text-[11px] font-normal text-stone-400">· Ref. BCV</span></p>`
+                            : ""
+                        }
+                      </div>
+                      <div>
+                        <p class="text-xs text-stone-500">Disponibles</p>
+                        <p class="mt-0.5 font-mono-custom text-base font-semibold text-teal-800 tabular-nums sm:text-lg">${stats.availableCount} / ${stats.total}</p>
+                      </div>
+                      <div class="col-span-2 sm:col-span-1">
+                        <p class="text-xs text-stone-500">Sorteo</p>
+                        <p class="mt-0.5 text-sm font-semibold leading-snug">${esc(raffle.drawDate || "Por definir")}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <div class="mb-1.5 flex items-center justify-between text-xs text-stone-500">
+                        <span>Avance de boletos apartados y pagados</span>
+                        <span class="font-mono-custom font-medium text-[#141413] tabular-nums">${stats.soldPercentage}%</span>
+                      </div>
+                      <div class="h-2 w-full overflow-hidden rounded-full bg-stone-100">
+                        <div class="h-full rounded-full bg-teal-700" style="width:${Math.min(100, stats.soldPercentage)}%"></div>
+                      </div>
+                    </div>
+                    <button type="button" data-scroll="boletos" class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#141413] px-5 py-3 text-sm font-semibold text-white hover:bg-stone-800 cursor-pointer">
+                      <span>${raffle.status === "active" ? "Elegir mis números ↓" : "Ver tablero de boletos ↓"}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- TABLERO + REGISTRO -->
+            <section class="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+              <div class="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-start">
+                <div class="lg:col-span-8">${renderTicketBoard(raffle)}</div>
+                <div class="lg:col-span-4">${renderReservationPanel(raffle)}</div>
+              </div>
+            </section>
+
+            ${renderVerifierSection()}
+            ${renderParticipantsSection(raffle)}
+            ${renderHowItWorks()}
+          </main>
+        `;
+      }
+
+      function renderTicketBoard(raffle) {
         const ticketMap = new Map(state.tickets.map((t) => [t.ticketNumber, t]));
         const selectedSet = new Set(state.selectedNumbers);
-        const allNumbers = Array.from({ length: raffle.totalTickets }, (_, i) => raffle.startNumber + i);
-
         const q = state.boardSearch.trim().toLowerCase();
-        const filteredNumbers = allNumbers.filter((num) => {
+        const allNumbers = Array.from(
+          { length: Math.max(0, Math.min(1000, raffle.totalTickets)) },
+          (_, i) => raffle.startNumber + i
+        );
+        const filtered = allNumbers.filter((num) => {
           const res = ticketMap.get(num);
-          if (state.boardFilter === 'available' && res) return false;
-          if (state.boardFilter === 'apartado' && res?.status !== 'apartado') return false;
-          if (state.boardFilter === 'pagado' && res?.status !== 'pagado') return false;
+          if (state.boardFilter === "available" && res) return false;
+          if (state.boardFilter === "apartado" && res?.status !== "apartado") return false;
+          if (state.boardFilter === "pagado" && res?.status !== "pagado") return false;
           if (!q) return true;
-          const fmt = formatTicketNumber(num, raffle.totalTickets, raffle.startNumber);
+          const formatted = formatTicketNumber(num, raffle.totalTickets, raffle.startNumber);
           return (
-            fmt.includes(q) ||
+            formatted.includes(q) ||
             String(num).includes(q) ||
-            (res?.holderName.toLowerCase().includes(q) ?? false) ||
-            (res?.holderCity.toLowerCase().includes(q) ?? false)
+            (res?.holderName || "").toLowerCase().includes(q) ||
+            (res?.holderCity || "").toLowerCase().includes(q)
           );
         });
 
-        const groups = groupParticipants(state.tickets).filter((g) => {
-          const pq = state.participantSearch.trim().toLowerCase();
-          if (!pq) return true;
-          return (
-            g.holderName.toLowerCase().includes(pq) ||
-            g.holderCity.toLowerCase().includes(pq) ||
-            g.tickets.some((t) => formatTicketNumber(t.ticketNumber, raffle.totalTickets, raffle.startNumber).includes(pq))
-          );
-        });
+        return `
+          <div id="boletos" class="scroll-mt-20 space-y-5">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 class="text-xl font-bold tracking-tight">Tablero de boletos</h2>
+                <p class="mt-1 text-sm text-stone-600">Toca un boleto disponible para apartarlo o toca uno ocupado para ver quién lo registró.</p>
+              </div>
+              ${
+                raffle.status === "active"
+                  ? `<div class="flex items-center gap-2 shrink-0">
+                      <button type="button" data-random="1" class="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs font-semibold hover:bg-stone-100 cursor-pointer">1 al azar</button>
+                      <button type="button" data-random="3" class="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs font-semibold hover:bg-stone-100 cursor-pointer">3 al azar</button>
+                    </div>`
+                  : ""
+              }
+            </div>
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div class="inline-flex flex-wrap items-center gap-1 rounded-xl bg-stone-200/70 p-1">
+                ${[
+                  ["all", "Todos"],
+                  ["available", "Disponibles"],
+                  ["apartado", "Apartados"],
+                  ["pagado", "Pagados"],
+                ]
+                  .map(
+                    ([id, label]) =>
+                      `<button type="button" data-board-filter="${id}" class="rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer ${state.boardFilter === id ? "bg-white text-[#141413] shadow-xs" : "text-stone-600"}">${label}</button>`
+                  )
+                  .join("")}
+              </div>
+              <input id="board-search" type="search" value="${esc(state.boardSearch)}" placeholder="Buscar # o participante..." class="w-full sm:w-64 rounded-xl border border-stone-200 bg-white py-2 px-3 text-sm focus:border-teal-700 focus:outline-none" />
+            </div>
+            ${
+              state.inspectedTicket
+                ? `<div class="flex items-center justify-between gap-4 rounded-xl border border-stone-200 bg-white p-4">
+                    <div>
+                      <p class="text-xs font-medium text-stone-500">Boleto #${esc(formatTicketNumber(state.inspectedTicket.ticketNumber, raffle.totalTickets, raffle.startNumber))} · <span class="font-semibold ${state.inspectedTicket.status === "pagado" ? "text-teal-800" : "text-amber-800"}">${state.inspectedTicket.status === "pagado" ? "Pagado" : "Apartado"}</span></p>
+                      <p class="text-sm font-semibold">Registrado por ${esc(state.inspectedTicket.holderName)}${state.inspectedTicket.holderCity ? ` · ${esc(state.inspectedTicket.holderCity)}` : ""}</p>
+                    </div>
+                    <button type="button" data-action="close-inspect" class="rounded-lg px-2 py-1 text-xs font-semibold text-stone-500 hover:bg-stone-100 cursor-pointer">✕</button>
+                  </div>`
+                : ""
+            }
+            <div class="grid grid-cols-5 gap-2 sm:grid-cols-8 md:grid-cols-10">
+              ${filtered
+                .map((num) => {
+                  const formatted = formatTicketNumber(num, raffle.totalTickets, raffle.startNumber);
+                  const res = ticketMap.get(num);
+                  const isSel = selectedSet.has(num);
+                  let cls = "border-stone-200 bg-white text-[#141413] hover:border-teal-700";
+                  if (res) {
+                    cls =
+                      res.status === "pagado"
+                        ? "border-stone-200 bg-stone-200/80 text-stone-600"
+                        : "border-amber-300 bg-amber-50 text-amber-900";
+                  } else if (isSel) {
+                    cls = "border-teal-800 bg-teal-700 text-white";
+                  }
+                  return `<button type="button" data-ticket="${num}" class="flex min-h-[44px] flex-col items-center justify-center rounded-xl border px-1 py-2 font-mono-custom text-sm font-semibold tabular-nums cursor-pointer ${cls}">
+                    <span>${formatted}</span>
+                    ${res ? `<span class="mt-0.5 text-[10px] font-sans font-medium leading-none opacity-80">${res.status === "pagado" ? "Pag." : "Apart."}</span>` : ""}
+                  </button>`;
+                })
+                .join("")}
+            </div>
+          </div>
+        `;
+      }
 
-        const statusLabel =
-          raffle.status === 'active'
-            ? 'Rifa activa'
-            : raffle.status === 'paused'
-              ? 'Apartados pausados'
-              : 'Sorteo finalizado';
+      function renderReservationPanel(raffle) {
+        if (state.receipt) {
+          const r = state.receipt;
+          const rCur = r.currency.trim().toUpperCase();
+          const showRBs = rCur !== "VES" && rCur !== "BS";
+          const rBs = showRBs
+            ? r.totalAmountBs ?? convertToBolivares(r.totalAmount, r.currency, state.bcvRate)
+            : null;
+          return `
+            <aside id="registro-panel" class="rounded-2xl border border-teal-200 bg-white p-6 lg:sticky lg:top-20">
+              <h3 class="text-lg font-bold">Boletos apartados en la nube</h3>
+              <p class="mt-1 text-sm text-stone-600">Tu registro ya es visible en el tablero para todos.</p>
+              <div class="mt-4 space-y-2.5 rounded-xl border border-stone-200 bg-[#F8F8F6] p-4 text-sm">
+                <div class="flex justify-between gap-2"><span class="text-stone-500">Participante</span><span class="font-semibold">${esc(r.holderName)}</span></div>
+                <div class="flex justify-between gap-2"><span class="text-stone-500">Cédula</span><span class="font-mono-custom font-semibold">${esc(r.holderCedula)}</span></div>
+                <div class="flex justify-between gap-2"><span class="text-stone-500">Boletos</span><span class="font-mono-custom font-semibold text-teal-800 text-right">${esc(r.formattedNumbers.join(", "))}</span></div>
+                <div class="flex justify-between gap-2 border-t border-stone-200 pt-2">
+                  <span class="text-stone-500">Total</span>
+                  <div class="text-right">
+                    <span class="block font-arial text-lg font-bold">${esc(formatMoney(r.totalAmount, r.currency))}</span>
+                    ${rBs !== null ? `<span class="block font-mono-custom text-xs font-semibold text-[#489B22]">${esc(formatBolivares(rBs))} · Ref. BCV</span>` : ""}
+                  </div>
+                </div>
+              </div>
+              ${
+                r.paymentInstructions
+                  ? `<div class="mt-4 rounded-xl border border-stone-200 bg-stone-50 p-3.5 text-xs text-stone-700"><p class="font-semibold mb-1">Datos para pago</p><p>${esc(r.paymentInstructions)}</p></div>`
+                  : ""
+              }
+              <div class="mt-5 space-y-2.5">
+                <a href="${esc(r.whatsappUrl)}" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-[#16A34A] px-4 py-3 text-sm font-semibold text-white hover:bg-[#15803D]">Concretar compra por WhatsApp</a>
+                <button type="button" data-action="reset-receipt" class="inline-flex min-h-[40px] w-full items-center justify-center rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs font-semibold cursor-pointer">Apartar otros</button>
+              </div>
+            </aside>
+          `;
+        }
 
-        const totalAmount = state.selectedNumbers.length * raffle.ticketPrice;
-        const waDigits = sanitizeDigits(raffle.whatsappNumber);
+        const total = state.selectedNumbers.length * raffle.ticketPrice;
+        const curUpper = raffle.currency.trim().toUpperCase();
+        const showBs = curUpper !== "VES" && curUpper !== "BS";
+        const totalBs = showBs ? convertToBolivares(total, raffle.currency, state.bcvRate) : null;
+        const waDigits = sanitizePhoneDigits(raffle.whatsappNumber);
         const quickWaUrl =
           state.selectedNumbers.length > 0
             ? buildWhatsAppUrl({
@@ -577,379 +940,552 @@
                 ticketNumbers: state.selectedNumbers,
                 totalTickets: raffle.totalTickets,
                 startNumber: raffle.startNumber,
-                totalAmount,
+                totalAmount: total,
+                totalAmountBs: totalBs,
                 currency: raffle.currency,
-                holderName: 'Participante',
+                holderName: state.buyerName.trim() || "Participante",
+                holderCedula: state.buyerCedula.trim(),
+                holderCity: state.buyerCity.trim(),
               })
             : `https://wa.me/${waDigits}?text=${encodeURIComponent(`Hola, quiero más información sobre *${raffle.title}*.`)}`;
 
-        root.innerHTML = `
-          ${
-            state.raffles.length > 1
-              ? `<div class="mx-auto max-w-6xl px-4 pt-5 sm:px-6 flex flex-wrap items-center gap-2 text-xs text-stone-600">
-                  <span class="font-medium">Rifas disponibles:</span>
-                  ${state.raffles
-                    .map(
-                      (r) => `<button type="button" data-pick-raffle="${esc(r.id)}" class="rounded-lg px-3 py-1.5 font-semibold cursor-pointer ${
-                        r.id === raffle.id ? 'bg-[#141413] text-white' : 'bg-white border border-stone-200 text-[#141413] hover:bg-stone-100'
-                      }">${esc(r.title)}</button>`
-                    )
-                    .join('')}
-                </div>`
-              : ''
-          }
+        return `
+          <aside id="registro-panel" class="rounded-2xl border border-stone-200 bg-white p-6 lg:sticky lg:top-20">
+            <div class="flex items-center justify-between">
+              <h3 class="text-lg font-bold">Tu selección</h3>
+              ${state.selectedNumbers.length > 0 ? `<button type="button" data-action="clear-selection" class="text-xs font-medium text-stone-500 hover:text-red-700 cursor-pointer">Limpiar</button>` : ""}
+            </div>
+            ${
+              state.selectedNumbers.length === 0
+                ? `<div class="mt-3 rounded-xl border border-dashed border-stone-300 bg-[#F8F8F6] p-4 text-center text-sm text-stone-600">${raffle.status === "active" ? "Selecciona uno o más boletos disponibles en el tablero." : "Esta rifa no acepta nuevos apartados."}</div>`
+                : `<div class="mt-3 space-y-3">
+                    <div class="flex flex-wrap gap-1.5">
+                      ${state.selectedNumbers
+                        .map(
+                          (n) => `<button type="button" data-remove-num="${n}" class="rounded-lg bg-teal-50 border border-teal-200 px-2.5 py-1 font-mono-custom text-xs font-semibold text-teal-900 cursor-pointer">#${formatTicketNumber(n, raffle.totalTickets, raffle.startNumber)} ✕</button>`
+                        )
+                        .join("")}
+                    </div>
+                    <div class="flex items-start justify-between border-t border-stone-100 pt-3">
+                      <span class="text-sm text-stone-600">${state.selectedNumbers.length} ${state.selectedNumbers.length === 1 ? "boleto" : "boletos"}</span>
+                      <div class="text-right">
+                        <span class="block font-arial text-xl font-bold tabular-nums">${esc(formatMoney(total, raffle.currency))}</span>
+                        ${totalBs !== null ? `<span class="block font-mono-custom text-xs font-semibold text-[#489B22] tabular-nums">${esc(formatBolivares(totalBs))} <span class="font-sans text-[11px] font-normal text-stone-400">· Ref. BCV</span></span>` : ""}
+                      </div>
+                    </div>
+                  </div>`
+            }
+            ${
+              raffle.status === "active"
+                ? `<form id="buyer-form" class="mt-5 space-y-3.5 border-t border-stone-100 pt-5" novalidate>
+                    <div>
+                      <label class="block text-xs font-semibold">Nombre completo</label>
+                      <input id="buyer-name" type="text" maxlength="80" value="${esc(state.buyerName)}" placeholder="Ej. María López" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm" />
+                      ${state.buyerErrors.holderName ? `<p class="mt-1 text-xs text-red-700">${esc(state.buyerErrors.holderName)}</p>` : ""}
+                    </div>
+                    <div>
+                      <label class="block text-xs font-semibold">Cédula de identidad</label>
+                      <input id="buyer-cedula" type="text" maxlength="20" value="${esc(state.buyerCedula)}" placeholder="Ej. V-12345678 o 12345678" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 font-mono-custom text-sm" />
+                      ${state.buyerErrors.holderCedula ? `<p class="mt-1 text-xs text-red-700">${esc(state.buyerErrors.holderCedula)}</p>` : ""}
+                    </div>
+                    <div>
+                      <label class="block text-xs font-semibold">Ciudad o estado (opcional)</label>
+                      <input id="buyer-city" type="text" maxlength="60" value="${esc(state.buyerCity)}" placeholder="Ej. Caracas" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-semibold">Teléfono WhatsApp</label>
+                      <input id="buyer-phone" type="tel" maxlength="25" value="${esc(state.buyerPhone)}" placeholder="Ej. 0412 1234567" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 font-mono-custom text-sm" />
+                      <p class="mt-1 text-[11px] text-stone-500">Privado: solo visible para el organizador.</p>
+                      ${state.buyerErrors.phone ? `<p class="mt-1 text-xs text-red-700">${esc(state.buyerErrors.phone)}</p>` : ""}
+                    </div>
+                    ${state.buyerSubmitError ? `<div class="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800">${esc(state.buyerSubmitError)}</div>` : ""}
+                    <button type="submit" ${state.buyerSubmitting || state.selectedNumbers.length === 0 ? "disabled" : ""} class="min-h-[44px] w-full rounded-xl bg-[#141413] px-4 py-3 text-sm font-semibold text-white disabled:opacity-50 cursor-pointer">${state.buyerSubmitting ? "Guardando registro..." : "Apartar boletos"}</button>
+                    <a href="${esc(quickWaUrl)}" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl border border-[#16A34A]/30 bg-[#16A34A]/10 px-4 py-2.5 text-sm font-semibold text-[#15803D]">Concretar compra por WhatsApp</a>
+                  </form>`
+                : ""
+            }
+          </aside>
+        `;
+      }
 
-          <!-- Hero -->
-          <section class="mx-auto max-w-6xl px-4 pt-6 pb-8 sm:px-6 sm:pt-10 sm:pb-10">
-            <div class="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-stretch">
-              <!-- CONTENEDOR OPTIMIZADO PARA LA FOTO DEL PREMIO -->
-              <div class="lg:col-span-6 flex flex-col">
-                <div class="relative min-h-[260px] sm:min-h-[320px] lg:h-full w-full overflow-hidden rounded-2xl border border-stone-200 bg-stone-100 flex items-center justify-center">
-                  ${
-                    raffle.prizeImage && raffle.prizeImage.trim() !== ''
-                      ? `<img src="${esc(raffle.prizeImage)}" alt="${esc(raffle.prizeName)}" referrerpolicy="no-referrer" class="absolute inset-0 h-full w-full object-cover" onerror="this.style.display='none'; document.getElementById('fallback-prize-box').style.display='flex';" />`
-                      : ''
-                  }
-                  <div id="fallback-prize-box" class="${raffle.prizeImage && raffle.prizeImage.trim() !== '' ? 'hidden' : 'flex'} absolute inset-0 w-full h-full flex-col items-center justify-center bg-gradient-to-br from-stone-100 to-stone-200 p-6 text-center">
-                    <p class="text-xs font-semibold uppercase tracking-wider text-teal-800">Premio principal</p>
-                    <p class="mt-2 text-xl font-bold text-[#141413]">${esc(raffle.prizeName)}</p>
-                  </div>
-                </div>
-              </div>
+      function renderVerifierSection() {
+        const res = state.verifyResult;
+        let resultHtml = "";
+        if (res.kind === "invalid") {
+          resultHtml = `<div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">${esc(res.message)}</div>`;
+        } else if (res.kind === "out_of_range") {
+          resultHtml = `<div class="mt-4 rounded-xl border border-stone-200 bg-[#F8F8F6] p-4 text-sm">El boleto #${esc(res.rawNumber)} no pertenece a esta rifa.</div>`;
+        } else if (res.kind === "ticket_available") {
+          resultHtml = `<div class="mt-4 rounded-xl border border-stone-200 bg-[#F8F8F6] p-4"><p class="text-sm font-bold">Boleto #${esc(res.formattedNumber)} · Disponible</p><p class="text-xs text-stone-600">Aún está libre para apartar en el tablero.</p></div>`;
+        } else if (res.kind === "ticket_found") {
+          const paid = res.ticket.status === "pagado";
+          resultHtml = `<div class="mt-4 rounded-xl border p-4 ${paid ? "border-teal-200 bg-teal-50/60" : "border-amber-200 bg-amber-50/70"}"><p class="text-sm font-bold">Boleto #${esc(res.formattedNumber)} · ${paid ? "Pagado y confirmado" : "Apartado (pendiente por pagar)"}</p><p class="text-xs text-stone-700">Titular: <strong>${esc(res.ticket.holderName)}</strong>${res.ticket.holderCity ? ` · ${esc(res.ticket.holderCity)}` : ""}</p></div>`;
+        } else if (res.kind === "cedula_results") {
+          resultHtml = `<div class="mt-4 rounded-xl border border-stone-200 bg-[#F8F8F6] p-4">${
+            res.matches.length === 0
+              ? `<p class="text-sm">No encontramos boletos registrados con la cédula <strong>${esc(res.cedulaDigits)}</strong>.</p>`
+              : `<p class="text-sm font-bold mb-2">${esc(res.matches[0].holderName)} · ${res.matches.length} ${res.matches.length === 1 ? "boleto" : "boletos"}</p>
+                 <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                   ${res.matches
+                     .map((m) => {
+                       const r = getActiveRaffle();
+                       const fmt = formatTicketNumber(m.ticketNumber, r.totalTickets, r.startNumber);
+                       const paid = m.status === "pagado";
+                       return `<div class="flex items-center justify-between rounded-xl border bg-white px-3.5 py-2.5 ${paid ? "border-teal-200" : "border-amber-200"}"><span class="font-mono-custom text-sm font-bold">#${fmt}</span><span class="text-xs font-semibold ${paid ? "text-teal-800" : "text-amber-800"}">${paid ? "Pagado" : "Apartado"}</span></div>`;
+                     })
+                     .join("")}
+                 </div>`
+          }</div>`;
+        }
 
-              <div class="flex flex-col justify-between rounded-2xl border border-stone-200 bg-white p-6 sm:p-8 lg:col-span-6">
+        return `
+          <section id="verificar" class="scroll-mt-20 mx-auto max-w-6xl px-4 py-6 sm:px-6">
+            <div class="rounded-2xl border border-stone-200 bg-white p-6 sm:p-8">
+              <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                  <div class="flex flex-wrap items-center gap-2 text-xs font-medium text-stone-500">
-                    <span class="text-teal-800 font-semibold">${esc(statusLabel)}</span>
-                    <span>·</span>
-                    <span class="tabular-nums">${stats.total} boletos</span>
-                    ${raffle.drawMethod ? `<span>·</span><span>${esc(raffle.drawMethod)}</span>` : ''}
-                  </div>
-                  <h1 class="mt-3 text-2xl font-bold tracking-tight text-[#141413] sm:text-4xl">${esc(raffle.title)}</h1>
-                  <p class="mt-2 text-base font-medium text-teal-800">Premio: ${esc(raffle.prizeName)}</p>
-                  ${raffle.description ? `<p class="mt-3 text-sm leading-relaxed text-stone-600">${esc(raffle.description)}</p>` : ''}
-                  ${
-                    raffle.status === 'finished' && raffle.winnerNumber
-                      ? `<div class="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-4">
-                          <p class="text-xs font-semibold text-amber-900">Boleto ganador #${esc(raffle.winnerNumber)}</p>
-                          <p class="text-sm font-bold text-[#141413]">${esc(raffle.winnerName || 'Ganador confirmado')}</p>
-                        </div>`
-                      : ''
-                  }
+                  <h2 class="text-xl font-bold tracking-tight">Verificar estado de tus boletos</h2>
+                  <p class="mt-1 text-sm text-stone-600">Consulta si tus boletos están apartados o pagados buscando por tu cédula o número de boleto.</p>
                 </div>
-
-                <div class="mt-6 space-y-5 border-t border-stone-100 pt-5">
-                  <div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                    <div>
-                      <p class="text-xs text-stone-500">Boleto</p>
-                      <p class="mt-0.5 font-mono text-base font-semibold text-[#141413] tabular-nums sm:text-lg">${esc(formatMoney(raffle.ticketPrice, raffle.currency))}</p>
-                    </div>
-                    <div>
-                      <p class="text-xs text-stone-500">Disponibles</p>
-                      <p class="mt-0.5 font-mono text-base font-semibold text-teal-800 tabular-nums sm:text-lg">${stats.availableCount} / ${stats.total}</p>
-                    </div>
-                    <div class="col-span-2 sm:col-span-1">
-                      <p class="text-xs text-stone-500">Sorteo</p>
-                      <p class="mt-0.5 text-sm font-semibold leading-snug text-[#141413]">${esc(raffle.drawDate || 'Por definir')}</p>
-                    </div>
-                  </div>
-                  <div>
-                    <div class="mb-1.5 flex items-center justify-between text-xs text-stone-500">
-                      <span>Avance de boletos apartados y pagados</span>
-                      <span class="font-mono font-medium text-[#141413] tabular-nums">${stats.soldPercentage}%</span>
-                    </div>
-                    <div class="h-2 w-full overflow-hidden rounded-full bg-stone-100">
-                      <div class="h-full rounded-full bg-teal-700" style="width:${Math.min(100, stats.soldPercentage)}%"></div>
-                    </div>
-                  </div>
-                  <button type="button" data-scroll="boletos" class="w-full rounded-xl bg-[#141413] px-5 py-3 text-sm font-semibold text-white hover:bg-stone-800 cursor-pointer">
-                    ${raffle.status === 'active' ? 'Elegir mis números ↓' : 'Ver tablero de boletos ↓'}
-                  </button>
+                <div class="inline-flex items-center gap-1 rounded-xl bg-stone-100 p-1 self-start">
+                  ${[
+                    ["auto", "Cédula o Boleto"],
+                    ["cedula", "Por cédula"],
+                    ["ticket", "Por N° de boleto"],
+                  ]
+                    .map(
+                      ([id, lbl]) =>
+                        `<button type="button" data-verify-mode="${id}" class="rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer ${state.verifyMode === id ? "bg-white shadow-xs" : "text-stone-600"}">${lbl}</button>`
+                    )
+                    .join("")}
                 </div>
               </div>
+              <form id="verify-form" class="mt-5 flex flex-col gap-3 sm:flex-row">
+                <input id="verify-input" type="text" maxlength="30" value="${esc(state.verifyQuery)}" placeholder="Ingresa tu cédula (ej. 12345678) o N° de boleto (ej. 05)" class="flex-1 rounded-xl border border-stone-200 px-4 py-2.5 text-sm focus:border-teal-700 focus:outline-none" />
+                <button type="submit" class="min-h-[44px] rounded-xl bg-[#141413] px-5 py-2.5 text-sm font-semibold text-white hover:bg-stone-800 cursor-pointer">Verificar</button>
+              </form>
+              ${resultHtml}
             </div>
           </section>
+        `;
+      }
 
-          <!-- Tablero + Panel de registro -->
-          <section class="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-            <div class="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-start">
-              <div id="boletos" class="scroll-mt-20 space-y-5 lg:col-span-8">
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                  <div>
-                    <h2 class="text-xl font-bold tracking-tight text-[#141413]">Tablero de boletos</h2>
-                    <p class="mt-1 text-sm text-stone-600">Toca un boleto disponible para apartarlo o toca uno ocupado para ver quién lo registró.</p>
-                  </div>
-                  ${
-                    raffle.status === 'active'
-                      ? `<div class="flex items-center gap-2 shrink-0">
-                          <button type="button" data-random="1" class="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs font-semibold hover:bg-stone-100 cursor-pointer">1 al azar</button>
-                          <button type="button" data-random="3" class="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs font-semibold hover:bg-stone-100 cursor-pointer">3 al azar</button>
-                        </div>`
-                      : ''
-                  }
-                </div>
+      function renderParticipantsSection(raffle) {
+        const map = new Map();
+        for (const t of state.tickets) {
+          const key = `${t.holderName.trim().toLowerCase()}__${t.holderCity.trim().toLowerCase()}`;
+          const ts = t.createdAt ? t.createdAt.getTime() : 0;
+          const prev = map.get(key);
+          if (prev) {
+            prev.tickets.push(t);
+            if (t.status === "pagado") prev.paidCount += 1;
+            else prev.reservedCount += 1;
+            if (ts > prev.latestDate) prev.latestDate = ts;
+          } else {
+            map.set(key, {
+              holderName: t.holderName,
+              holderCity: t.holderCity,
+              tickets: [t],
+              paidCount: t.status === "pagado" ? 1 : 0,
+              reservedCount: t.status === "apartado" ? 1 : 0,
+              latestDate: ts,
+            });
+          }
+        }
+        const q = state.participantsSearch.trim().toLowerCase();
+        const groups = Array.from(map.values())
+          .sort((a, b) => b.latestDate - a.latestDate)
+          .filter(
+            (g) =>
+              !q ||
+              g.holderName.toLowerCase().includes(q) ||
+              g.holderCity.toLowerCase().includes(q) ||
+              g.tickets.some((t) =>
+                formatTicketNumber(t.ticketNumber, raffle.totalTickets, raffle.startNumber).includes(q)
+              )
+          );
 
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div class="inline-flex flex-wrap items-center gap-1 rounded-xl bg-stone-200/70 p-1">
-                    ${[
-                      ['all', 'Todos'],
-                      ['available', 'Disponibles'],
-                      ['apartado', 'Apartados'],
-                      ['pagado', 'Pagados'],
-                    ]
-                      .map(
-                        ([id, label]) =>
-                          `<button type="button" data-filter="${id}" class="rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer ${
-                            state.boardFilter === id ? 'bg-white text-[#141413] shadow-xs' : 'text-stone-600 hover:text-[#141413]'
-                          }">${label}</button>`
-                      )
-                      .join('')}
-                  </div>
-                  <input id="board-search" type="search" value="${esc(state.boardSearch)}" placeholder="Buscar # o participante..." class="w-full sm:w-64 rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-sm focus:border-teal-700 focus:outline-none" />
-                </div>
-
-                ${
-                  state.inspectedTicket
-                    ? `<div class="flex items-center justify-between gap-4 rounded-xl border border-stone-200 bg-white p-4">
-                        <div>
-                          <p class="text-xs font-medium text-stone-500">Boleto #${esc(formatTicketNumber(state.inspectedTicket.ticketNumber, raffle.totalTickets, raffle.startNumber))} · <span class="font-semibold ${state.inspectedTicket.status === 'pagado' ? 'text-teal-800' : 'text-amber-800'}">${state.inspectedTicket.status === 'pagado' ? 'Pagado' : 'Apartado'}</span></p>
-                          <p class="text-sm font-semibold text-[#141413]">Registrado por ${esc(state.inspectedTicket.holderName)}${state.inspectedTicket.holderCity ? ` · ${esc(state.inspectedTicket.holderCity)}` : ''}</p>
-                        </div>
-                        <button type="button" id="close-inspected" class="rounded-lg px-2.5 py-1 text-xs font-semibold text-stone-500 hover:bg-stone-100 cursor-pointer">Cerrar</button>
-                      </div>`
-                    : ''
-                }
-
-                <div class="grid grid-cols-5 gap-2 sm:grid-cols-8 md:grid-cols-10">
-                  ${filteredNumbers
-                    .map((num) => {
-                      const fmt = formatTicketNumber(num, raffle.totalTickets, raffle.startNumber);
-                      const res = ticketMap.get(num);
-                      const isSel = selectedSet.has(num);
-                      let cls = 'border-stone-200 bg-white text-[#141413] hover:border-teal-700 hover:bg-teal-50/40';
-                      let sub = '';
-                      if (res) {
-                        if (res.status === 'pagado') {
-                          cls = 'border-stone-200 bg-stone-200/80 text-stone-600';
-                          sub = '<span class="mt-0.5 text-[10px] font-sans font-medium leading-none">Pag.</span>';
-                        } else {
-                          cls = 'border-amber-300 bg-amber-50 text-amber-900';
-                          sub = '<span class="mt-0.5 text-[10px] font-sans font-medium leading-none">Apart.</span>';
-                        }
-                      } else if (isSel) {
-                        cls = 'border-teal-800 bg-teal-700 text-white';
-                      }
-                      return `<button type="button" data-ticket="${num}" class="flex min-h-[44px] flex-col items-center justify-center rounded-xl border px-1 py-2 font-mono text-sm font-semibold tabular-nums cursor-pointer ${cls}"><span>${fmt}</span>${sub}</button>`;
-                    })
-                    .join('')}
-                </div>
-              </div>
-
-              <!-- Panel de apartado -->
-              <aside id="registro-panel" class="rounded-2xl border border-stone-200 bg-white p-6 lg:col-span-4 lg:sticky lg:top-20">
-                ${
-                  state.receipt
-                    ? `<div>
-                        <h3 class="text-lg font-bold text-teal-800">Boletos apartados en la nube</h3>
-                        <p class="mt-1 text-sm text-stone-600">Tu registro ya es visible en el tablero para todos.</p>
-                        <div class="mt-4 space-y-2.5 rounded-xl border border-stone-200 bg-[#F8F8F6] p-4 text-sm">
-                          <div class="flex justify-between gap-2"><span class="text-stone-500">Participante</span><span class="font-semibold">${esc(state.receipt.holderName)}</span></div>
-                          <div class="flex justify-between gap-2"><span class="text-stone-500">Boletos</span><span class="font-mono font-semibold text-teal-800">${esc(state.receipt.formattedNumbers.join(', '))}</span></div>
-                          <div class="flex justify-between gap-2 border-t border-stone-200 pt-2"><span class="text-stone-500">Total</span><span class="font-mono font-bold">${esc(formatMoney(state.receipt.totalAmount, state.receipt.currency))}</span></div>
-                        </div>
-                        ${
-                          state.receipt.paymentInstructions
-                            ? `<div class="mt-4 rounded-xl border border-stone-200 bg-stone-50 p-3.5 text-xs text-stone-700"><p class="font-semibold text-[#141413] mb-1">Datos para pago</p><p>${esc(state.receipt.paymentInstructions)}</p></div>`
-                            : ''
-                        }
-                        <a href="${esc(state.receipt.whatsappUrl)}" target="_blank" rel="noopener noreferrer" class="mt-5 flex min-h-[44px] w-full items-center justify-center rounded-xl bg-[#16A34A] px-4 py-3 text-sm font-semibold text-white hover:bg-[#15803D]">Concretar compra por WhatsApp</a>
-                        <button type="button" id="btn-reset-receipt" class="mt-2.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-2 text-xs font-semibold text-[#141413] hover:bg-stone-50 cursor-pointer">Apartar otros boletos</button>
-                      </div>`
-                    : `<div>
-                        <div class="flex items-center justify-between">
-                          <h3 class="text-lg font-bold">Tu selección</h3>
-                          ${state.selectedNumbers.length ? `<button type="button" id="btn-clear-sel" class="text-xs font-medium text-stone-500 hover:text-red-700 cursor-pointer">Limpiar</button>` : ''}
-                        </div>
-                        ${
-                          state.selectedNumbers.length === 0
-                            ? `<div class="mt-3 rounded-xl border border-dashed border-stone-300 bg-[#F8F8F6] p-4 text-center text-sm text-stone-600">${
-                                raffle.status === 'active'
-                                  ? 'Selecciona uno o más boletos disponibles en el tablero.'
-                                  : 'Esta rifa no acepta nuevos apartados.'
-                              }</div>`
-                            : `<div class="mt-3 space-y-3">
-                                <div class="flex flex-wrap gap-1.5">
-                                  ${state.selectedNumbers
-                                    .slice()
-                                    .sort((a, b) => a - b)
-                                    .map((n) => `<button type="button" data-remove-num="${n}" class="rounded-lg bg-teal-50 border border-teal-200 px-2.5 py-1 font-mono text-xs font-semibold text-teal-900 cursor-pointer">#${formatTicketNumber(n, raffle.totalTickets, raffle.startNumber)} ×</button>`)
-                                    .join('')}
-                                </div>
-                                <div class="flex items-center justify-between border-t border-stone-100 pt-3">
-                                  <span class="text-sm text-stone-600">${state.selectedNumbers.length} ${state.selectedNumbers.length === 1 ? 'boleto' : 'boletos'}</span>
-                                  <span class="font-mono text-lg font-bold tabular-nums">${esc(formatMoney(totalAmount, raffle.currency))}</span>
-                                </div>
-                              </div>`
-                        }
-                        ${
-                          raffle.status === 'active'
-                            ? `<form id="buyer-form" class="mt-5 space-y-3.5 border-t border-stone-100 pt-5">
-                                <div>
-                                  <label for="buyer-name" class="block text-xs font-semibold">Nombre completo</label>
-                                  <input id="buyer-name" type="text" required maxlength="80" placeholder="Ej. María López" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm focus:border-teal-700 focus:outline-none" />
-                                </div>
-                                <div>
-                                  <label for="buyer-city" class="block text-xs font-semibold">Ciudad o estado (opcional)</label>
-                                  <input id="buyer-city" type="text" maxlength="60" placeholder="Ej. Monterrey, NL" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm focus:border-teal-700 focus:outline-none" />
-                                </div>
-                                <div>
-                                  <label for="buyer-phone" class="block text-xs font-semibold">Teléfono WhatsApp</label>
-                                  <input id="buyer-phone" type="tel" required maxlength="25" placeholder="Ej. 55 1234 5678" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 font-mono text-sm focus:border-teal-700 focus:outline-none" />
-                                  <p class="mt-1 text-[11px] text-stone-500">Privado: solo visible para el organizador.</p>
-                                </div>
-                                <p id="buyer-error" class="hidden rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-800"></p>
-                                <button type="submit" ${state.selectedNumbers.length === 0 ? 'disabled' : ''} class="min-h-[44px] w-full rounded-xl bg-[#141413] px-4 py-3 text-sm font-semibold text-white hover:bg-stone-800 disabled:opacity-50 cursor-pointer">Apartar boletos</button>
-                                <a href="${esc(quickWaUrl)}" target="_blank" rel="noopener noreferrer" class="flex min-h-[44px] w-full items-center justify-center rounded-xl border border-[#16A34A]/30 bg-[#16A34A]/10 px-4 py-2.5 text-sm font-semibold text-[#15803D] hover:bg-[#16A34A]/15">Concretar compra por WhatsApp</a>
-                              </form>`
-                            : ''
-                        }
-                      </div>`
-                }
-              </aside>
-            </div>
-          </section>
-
-          <!-- Participantes registrados -->
-          <section id="participantes" class="scroll-mt-20 mx-auto max-w-6xl px-4 py-10 sm:px-6 border-t border-stone-200">
+        return `
+          <section id="participantes" class="scroll-mt-20 mx-auto max-w-6xl px-4 py-10 sm:px-6 border-t border-sky-200/75">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <h2 class="text-xl font-bold tracking-tight">Participantes registrados</h2>
-                <p class="mt-1 text-sm text-stone-600">Lista en tiempo real de personas que ya apartaron o pagaron boletos.</p>
+                <p class="mt-1 text-sm text-stone-600">Lista actualizada en tiempo real de personas que ya apartaron o pagaron boletos.</p>
               </div>
-              <input id="participant-search" type="search" value="${esc(state.participantSearch)}" placeholder="Buscar participante o número..." class="w-full sm:w-72 rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-sm focus:border-teal-700 focus:outline-none" />
+              <input id="participants-search" type="search" value="${esc(state.participantsSearch)}" placeholder="Buscar participante o número..." class="w-full sm:w-72 rounded-xl border border-stone-200 bg-white py-2 px-3 text-sm" />
             </div>
             ${
               groups.length === 0
                 ? `<div class="mt-6 rounded-2xl border border-stone-200 bg-white p-10 text-center text-sm text-stone-600">Aún no hay participantes registrados en esta rifa.</div>`
-                : `<div class="mt-6 overflow-hidden rounded-2xl border border-stone-200 bg-white">
-                    <div class="overflow-x-auto">
-                      <table class="w-full text-left text-sm">
-                        <thead>
-                          <tr class="border-b border-stone-200 bg-stone-50 text-xs font-semibold text-stone-600">
-                            <th class="px-4 py-3">Participante</th>
-                            <th class="px-4 py-3">Ciudad</th>
-                            <th class="px-4 py-3">Números apartados</th>
-                            <th class="px-4 py-3 text-right">Estado</th>
-                          </tr>
-                        </thead>
-                        <tbody class="divide-y divide-stone-100">
-                          ${groups
-                            .map((g) => {
-                              const st = g.paidCount > 0 && g.reservedCount === 0 ? 'Pagado' : g.paidCount > 0 ? `${g.paidCount} pag. / ${g.reservedCount} apart.` : 'Apartado';
-                              const numsText = g.tickets.map((t) => formatTicketNumber(t.ticketNumber, raffle.totalTickets, raffle.startNumber)).join(', ');
-                              return `<tr>
-                                <td class="px-4 py-3 font-semibold">${esc(g.holderName)}</td>
-                                <td class="px-4 py-3 text-stone-600">${esc(g.holderCity || '—')}</td>
-                                <td class="px-4 py-3 font-mono text-xs font-medium tabular-nums">${esc(numsText)}</td>
-                                <td class="px-4 py-3 text-right text-xs font-semibold ${g.paidCount > 0 && g.reservedCount === 0 ? 'text-teal-800' : 'text-amber-800'}">${esc(st)}</td>
-                              </tr>`;
-                            })
-                            .join('')}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>`
+                : `<div class="mt-6 overflow-hidden rounded-2xl border border-stone-200 bg-white"><div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead><tr class="border-b border-stone-200 bg-stone-50 text-xs font-semibold text-stone-600"><th class="px-4 py-3">Participante</th><th class="px-4 py-3">Ciudad</th><th class="px-4 py-3">Números apartados</th><th class="px-4 py-3 text-right">Estado</th></tr></thead><tbody class="divide-y divide-stone-100">${groups
+                    .map((g) => {
+                      const nums = g.tickets
+                        .slice()
+                        .sort((a, b) => a.ticketNumber - b.ticketNumber)
+                        .map((t) => formatTicketNumber(t.ticketNumber, raffle.totalTickets, raffle.startNumber))
+                        .join(", ");
+                      const lbl =
+                        g.paidCount > 0 && g.reservedCount === 0
+                          ? "Pagado"
+                          : g.paidCount > 0
+                            ? `${g.paidCount} pag. / ${g.reservedCount} apart.`
+                            : "Apartado";
+                      return `<tr><td class="px-4 py-3 font-semibold">${esc(g.holderName)}</td><td class="px-4 py-3 text-stone-600">${esc(g.holderCity || "—")}</td><td class="px-4 py-3 font-mono-custom text-xs">${esc(nums)}</td><td class="px-4 py-3 text-right text-xs font-semibold ${g.paidCount > 0 && g.reservedCount === 0 ? "text-teal-800" : "text-amber-800"}">${esc(lbl)}</td></tr>`;
+                    })
+                    .join("")}</tbody></table></div></div>`
             }
           </section>
+        `;
+      }
 
-          <!-- Cómo funciona -->
-          <section id="como-funciona" class="scroll-mt-20 mx-auto max-w-6xl px-4 py-10 sm:px-6 border-t border-stone-200">
-            <h2 class="text-xl font-bold tracking-tight">Cómo participar</h2>
-            <div class="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
-              <div class="rounded-2xl border border-stone-200 bg-white p-6">
-                <p class="font-mono text-sm font-semibold text-teal-800">01. Elige tus números</p>
-                <p class="mt-2 text-sm text-stone-600">Selecciona boletos disponibles directamente en el tablero o usa la opción al azar.</p>
-              </div>
-              <div class="rounded-2xl border border-stone-200 bg-white p-6">
-                <p class="font-mono text-sm font-semibold text-teal-800">02. Registra tus datos</p>
-                <p class="mt-2 text-sm text-stone-600">Guarda tu nombre y WhatsApp para apartar tus boletos al instante en la nube.</p>
-              </div>
-              <div class="rounded-2xl border border-stone-200 bg-white p-6">
-                <p class="font-mono text-sm font-semibold text-teal-800">03. Concreta por WhatsApp</p>
-                <p class="mt-2 text-sm text-stone-600">Envía tu comprobante con un clic y el organizador confirmará tus números como pagados.</p>
+      function renderHowItWorks() {
+        return `
+          <section id="como-funciona" class="scroll-mt-20 mx-auto max-w-6xl px-4 py-6 sm:px-6 border-t border-sky-200/75">
+            <h2 class="text-lg font-bold tracking-tight">Cómo participar</h2>
+            <div class="mt-3 rounded-2xl border border-stone-200 bg-white px-5 py-4">
+              <div class="grid grid-cols-1 divide-y divide-stone-200 md:grid-cols-3 md:divide-y-0 md:divide-x">
+                <div class="pb-3 md:pb-0 md:pr-5">
+                  <p class="font-mono-custom text-sm font-semibold text-teal-800">01. Elige tus números</p>
+                  <p class="mt-1 text-xs sm:text-sm text-stone-600">Selecciona tus boletos disponibles en el tablero o usa la opción al azar.</p>
+                </div>
+                <div class="py-3 md:py-0 md:px-5">
+                  <p class="font-mono-custom text-sm font-semibold text-teal-800">02. Registra tus datos</p>
+                  <p class="mt-1 text-xs sm:text-sm text-stone-600">Guarda tu nombre, cédula y WhatsApp para apartar tus boletos en la nube.</p>
+                </div>
+                <div class="pt-3 md:pt-0 md:pl-5">
+                  <p class="font-mono-custom text-sm font-semibold text-teal-800">03. Concreta por WhatsApp</p>
+                  <p class="mt-1 text-xs sm:text-sm text-stone-600">Envía tu comprobante con un clic y el organizador confirmará tu pago.</p>
+                </div>
               </div>
             </div>
           </section>
         `;
-
-        bindPublicEvents(raffle, ticketMap, allNumbers);
       }
 
-      function bindPublicEvents(raffle, ticketMap, allNumbers) {
-        document.querySelectorAll('[data-scroll]').forEach((btn) => {
-          btn.addEventListener('click', () => {
-            document.getElementById(btn.getAttribute('data-scroll'))?.scrollIntoView({ behavior: 'smooth' });
-          });
+      function renderMobileStickyBar(raffle) {
+        if (state.activeView !== "public" || !raffle || state.selectedNumbers.length === 0 || state.receipt) {
+          return "";
+        }
+        const total = state.selectedNumbers.length * raffle.ticketPrice;
+        const curUpper = raffle.currency.trim().toUpperCase();
+        const bs =
+          curUpper !== "VES" && curUpper !== "BS"
+            ? convertToBolivares(total, raffle.currency, state.bcvRate)
+            : null;
+        return `
+          <div class="fixed inset-x-0 bottom-0 z-20 border-t border-stone-200 bg-white/95 px-4 py-2.5 backdrop-blur-sm lg:hidden">
+            <div class="mx-auto flex max-w-6xl items-center justify-between gap-3">
+              <div>
+                <p class="text-xs text-stone-500">${state.selectedNumbers.length} ${state.selectedNumbers.length === 1 ? "boleto seleccionado" : "boletos seleccionados"}</p>
+                <p class="font-arial text-base font-bold tabular-nums">${esc(formatMoney(total, raffle.currency))}${bs !== null ? `<span class="ml-2 font-mono-custom text-xs font-semibold text-[#489B22]">· ${esc(formatBolivares(bs))}</span>` : ""}</p>
+              </div>
+              <button type="button" data-scroll="registro-panel" class="rounded-xl bg-[#141413] px-4 py-2.5 text-xs font-semibold text-white cursor-pointer">Apartar ahora</button>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderAdminPanel(raffle, stats) {
+        if (!state.authReady) {
+          return `<main class="flex-1 mx-auto max-w-4xl px-4 py-16 text-center text-sm text-stone-600">Verificando sesión...</main>`;
+        }
+        if (!state.user) {
+          return `
+            <main class="flex-1 mx-auto max-w-md px-4 py-16">
+              <div class="rounded-2xl border border-stone-200 bg-white p-8 text-center">
+                <h1 class="text-xl font-bold">Panel de Administrador</h1>
+                <p class="mt-2 text-sm text-stone-600">Inicia sesión con tu cuenta autorizada de Google para editar rifas, el nombre del sitio, confirmar pagos o restablecer boletos.</p>
+                <button type="button" data-action="admin-login" class="mt-6 min-h-[44px] w-full rounded-xl bg-[#141413] px-4 py-3 text-sm font-semibold text-white cursor-pointer">Iniciar sesión con Google</button>
+              </div>
+            </main>
+          `;
+        }
+        if (!state.isAdmin) {
+          return `
+            <main class="flex-1 mx-auto max-w-md px-4 py-16">
+              <div class="rounded-2xl border border-stone-200 bg-white p-8 text-center">
+                <h1 class="text-xl font-bold">Acceso restringido</h1>
+                <p class="mt-2 text-sm text-stone-600">La cuenta <strong>${esc(state.user.email)}</strong> no está autorizada.</p>
+                <button type="button" data-action="admin-logout" class="mt-6 min-h-[44px] w-full rounded-xl border border-stone-300 px-4 py-2.5 text-sm font-semibold cursor-pointer">Cerrar sesión</button>
+              </div>
+            </main>
+          `;
+        }
+
+        const f = state.adminForm;
+        const contactByKey = new Map(state.contacts.map((c) => [c.ticketKey, c]));
+        const q = state.adminTicketSearch.trim().toLowerCase();
+        const filteredTickets = state.tickets.filter((t) => {
+          if (state.adminTicketFilter !== "all" && t.status !== state.adminTicketFilter) return false;
+          if (!q) return true;
+          const fmt = raffle
+            ? formatTicketNumber(t.ticketNumber, raffle.totalTickets, raffle.startNumber)
+            : String(t.ticketNumber);
+          const contact = contactByKey.get(t.ticketKey);
+          const dateLbl = formatReservationDateTime(t.createdAt ?? contact?.createdAt).toLowerCase();
+          return (
+            fmt.includes(q) ||
+            t.holderName.toLowerCase().includes(q) ||
+            t.holderCity.toLowerCase().includes(q) ||
+            (contact?.holderCedula || "").toLowerCase().includes(q) ||
+            (contact?.phone || "").toLowerCase().includes(q) ||
+            dateLbl.includes(q)
+          );
         });
 
-        document.querySelectorAll('[data-pick-raffle]').forEach((btn) => {
-          btn.addEventListener('click', () => {
-            state.selectedRaffleId = btn.getAttribute('data-pick-raffle');
+        const previewImg = safeImageSrc(f.prizeImage);
+
+        return `
+          <main class="flex-1 mx-auto max-w-6xl w-full px-4 py-8 sm:px-6 space-y-6">
+            <div class="flex flex-col gap-4 rounded-2xl border border-stone-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p class="text-xs font-medium text-stone-500">Administrador · ${esc(state.user.email)}</p>
+                <h1 class="mt-0.5 text-xl font-bold">${state.isCreatingNew ? "Crear nueva rifa" : esc(raffle?.title || "Gestión de rifas")}</h1>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                ${
+                  state.raffles.length > 0
+                    ? `<select id="admin-raffle-select" class="rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm font-medium">
+                        ${state.isCreatingNew ? `<option value="">Nueva rifa...</option>` : ""}
+                        ${state.raffles
+                          .map((r) => `<option value="${esc(r.id)}" ${!state.isCreatingNew && raffle?.id === r.id ? "selected" : ""}>${esc(r.title)} ${r.isFeatured ? "(Principal)" : ""}</option>`)
+                          .join("")}
+                      </select>`
+                    : ""
+                }
+                <button type="button" data-action="admin-new-raffle" class="rounded-xl bg-teal-700 px-3.5 py-2 text-sm font-semibold text-white cursor-pointer">+ Nueva rifa</button>
+                <button type="button" data-action="admin-logout" class="rounded-xl border border-stone-300 bg-white px-3.5 py-2 text-sm font-medium cursor-pointer">Salir</button>
+              </div>
+            </div>
+
+            <!-- Editor de nombre del sitio -->
+            <form id="admin-brand-form" class="flex flex-col gap-3 rounded-2xl border border-stone-200 bg-white p-4 sm:flex-row sm:items-end sm:justify-between">
+              <div class="flex-1">
+                <label for="admin-brand-name" class="block text-xs font-semibold">Nombre del sitio (título superior izquierdo junto al ícono)</label>
+                <input id="admin-brand-name" type="text" maxlength="40" value="${esc(state.brandDraft)}" placeholder="Ej. Rifas El Dorado" class="mt-1 w-full sm:max-w-sm rounded-xl border border-stone-200 px-3.5 py-2 text-sm font-medium" />
+                ${state.brandError ? `<p class="mt-1 text-xs text-red-700">${esc(state.brandError)}</p>` : ""}
+              </div>
+              <button type="submit" ${state.brandSaving ? "disabled" : ""} class="min-h-[40px] rounded-xl bg-[#141413] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50 cursor-pointer">${state.brandSaving ? "Guardando..." : "Guardar nombre"}</button>
+            </form>
+
+            ${
+              state.adminFeedback
+                ? `<div class="rounded-xl border p-4 text-sm font-medium ${state.adminFeedback.type === "success" ? "border-teal-200 bg-teal-50 text-teal-900" : "border-red-200 bg-red-50 text-red-900"}">${esc(state.adminFeedback.text)}</div>`
+                : ""
+            }
+
+            ${
+              state.adminConfirm
+                ? `<div class="flex flex-col gap-3 rounded-2xl border border-red-300 bg-red-50 p-5 sm:flex-row sm:items-center sm:justify-between">
+                    <p class="text-sm font-bold text-red-900">${state.adminConfirm === "reset" ? "¿Restablecer todos los boletos de esta rifa?" : state.adminConfirm === "delete" ? "¿Eliminar esta rifa permanentemente?" : `¿Liberar el boleto #${esc(state.adminConfirm.label)}?`}</p>
+                    <div class="flex gap-2">
+                      <button type="button" data-action="admin-cancel-confirm" class="rounded-xl border border-stone-300 bg-white px-3.5 py-2 text-xs font-semibold cursor-pointer">Cancelar</button>
+                      <button type="button" data-action="admin-exec-confirm" class="rounded-xl bg-red-700 px-3.5 py-2 text-xs font-semibold text-white cursor-pointer">Sí, confirmar</button>
+                    </div>
+                  </div>`
+                : ""
+            }
+
+            ${
+              !state.isCreatingNew && raffle
+                ? `<div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                    <div class="rounded-2xl border border-stone-200 bg-white p-4"><p class="text-xs text-stone-500">Ocupados</p><p class="mt-1 font-mono-custom text-2xl font-bold">${stats.occupiedCount} / ${stats.total}</p></div>
+                    <div class="rounded-2xl border border-stone-200 bg-white p-4"><p class="text-xs text-stone-500">Pagados</p><p class="mt-1 font-mono-custom text-2xl font-bold text-teal-800">${stats.paidCount}</p></div>
+                    <div class="rounded-2xl border border-stone-200 bg-white p-4"><p class="text-xs text-stone-500">Recaudado</p><p class="mt-1 font-mono-custom text-xl font-bold">${esc(formatMoney(stats.collectedAmount, raffle.currency))}</p></div>
+                    <div class="rounded-2xl border border-stone-200 bg-white p-4"><p class="text-xs text-stone-500">Por cobrar (${stats.reservedCount})</p><p class="mt-1 font-mono-custom text-xl font-bold text-amber-800">${esc(formatMoney(stats.pendingAmount, raffle.currency))}</p></div>
+                  </div>`
+                : ""
+            }
+
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div class="inline-flex items-center gap-1 rounded-xl bg-stone-200/70 p-1 self-start">
+                <button type="button" data-admin-tab="config" class="rounded-lg px-4 py-2 text-sm font-semibold cursor-pointer ${state.adminTab === "config" ? "bg-white shadow-xs" : "text-stone-600"}">Configurar rifa</button>
+                ${!state.isCreatingNew && raffle ? `<button type="button" data-admin-tab="tickets" class="rounded-lg px-4 py-2 text-sm font-semibold cursor-pointer ${state.adminTab === "tickets" ? "bg-white shadow-xs" : "text-stone-600"}">Boletos y participantes (${state.tickets.length})</button>` : ""}
+              </div>
+              ${
+                !state.isCreatingNew && raffle
+                  ? `<div class="flex gap-2">
+                      <button type="button" data-action="admin-ask-reset" class="rounded-xl border border-stone-300 bg-white px-3.5 py-2 text-xs font-semibold cursor-pointer">Restablecer boletos</button>
+                      <button type="button" data-action="admin-ask-delete" class="rounded-xl border border-red-200 bg-white px-3.5 py-2 text-xs font-semibold text-red-700 cursor-pointer">Eliminar rifa</button>
+                    </div>`
+                  : ""
+              }
+            </div>
+
+            ${
+              state.adminTab === "config"
+                ? `<form id="admin-raffle-form" class="rounded-2xl border border-stone-200 bg-white p-6 space-y-5" novalidate>
+                    <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+                      <div><label class="block text-xs font-semibold">Título de la rifa</label><input id="f-title" type="text" maxlength="120" value="${esc(f.title)}" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm" /></div>
+                      <div><label class="block text-xs font-semibold">Premio principal</label><input id="f-prize" type="text" maxlength="120" value="${esc(f.prizeName)}" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm" /></div>
+                      <div class="md:col-span-2"><label class="block text-xs font-semibold">Descripción breve</label><textarea id="f-desc" rows="2" maxlength="500" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm">${esc(f.description)}</textarea></div>
+                      <div class="md:col-span-2 space-y-3">
+                        <div class="flex items-center justify-between">
+                          <span class="text-xs font-semibold">Imagen del premio</span>
+                          ${f.prizeImage ? `<button type="button" data-action="clear-image" class="rounded-lg border border-red-200 px-2.5 py-1 text-xs font-semibold text-red-700 cursor-pointer">Eliminar imagen</button>` : ""}
+                        </div>
+                        <div class="grid grid-cols-1 gap-4 rounded-xl border border-stone-200 bg-[#F8F8F6] p-4 sm:grid-cols-12 sm:items-center">
+                          <div class="sm:col-span-4"><div class="aspect-[16/10] overflow-hidden rounded-xl border border-stone-200 bg-white flex items-center justify-center">${previewImg ? `<img src="${esc(previewImg)}" class="h-full w-full object-cover" />` : `<span class="text-xs text-stone-400">Sin imagen</span>`}</div></div>
+                          <div class="sm:col-span-8 space-y-3">
+                            <label class="inline-flex items-center rounded-xl bg-[#141413] px-3.5 py-2 text-xs font-semibold text-white cursor-pointer">
+                              <span>${state.adminImageBusy ? "Optimizando foto..." : "Subir foto de mi galería"}</span>
+                              <input id="f-image-file" type="file" accept="image/*" class="sr-only" />
+                            </label>
+                            <div>
+                              <label class="block text-[11px] font-medium text-stone-600">O pega un enlace URL de imagen</label>
+                              <input id="f-image-url" type="url" maxlength="500" value="${f.prizeImage.startsWith("data:image/") ? "" : esc(f.prizeImage)}" placeholder="https://ejemplo.com/premio.jpg" class="mt-1 w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-sm" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div><label class="block text-xs font-semibold">Precio por boleto</label><input id="f-price" type="number" min="1" step="any" value="${esc(f.ticketPrice)}" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 font-mono-custom text-sm" /></div>
+                      <div><label class="block text-xs font-semibold">Moneda</label><select id="f-currency" class="mt-1 w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm">${CURRENCY_OPTIONS.map((c) => `<option value="${c.code}" ${f.currency === c.code ? "selected" : ""}>${c.label}</option>`).join("")}</select></div>
+                      <div><label class="block text-xs font-semibold">Cantidad total de boletos (10 a 1000)</label><input id="f-total" type="number" min="10" max="1000" value="${esc(f.totalTickets)}" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 font-mono-custom text-sm" /></div>
+                      <div><label class="block text-xs font-semibold">La numeración inicia en</label><select id="f-start" class="mt-1 w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 font-mono-custom text-sm"><option value="0" ${f.startNumber === 0 ? "selected" : ""}>00</option><option value="1" ${f.startNumber === 1 ? "selected" : ""}>01</option></select></div>
+                      <div><label class="block text-xs font-semibold">Fecha del sorteo</label><input id="f-date" type="text" maxlength="60" value="${esc(f.drawDate)}" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm" /></div>
+                      <div><label class="block text-xs font-semibold">Lotería / Método</label><input id="f-method" type="text" maxlength="120" value="${esc(f.drawMethod)}" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm" /></div>
+                      <div><label class="block text-xs font-semibold">WhatsApp (con código de país)</label><input id="f-wa" type="tel" maxlength="25" value="${esc(f.whatsappNumber)}" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 font-mono-custom text-sm" /></div>
+                      <div><label class="block text-xs font-semibold">Estado</label><select id="f-status" class="mt-1 w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm"><option value="active" ${f.status === "active" ? "selected" : ""}>Activa</option><option value="paused" ${f.status === "paused" ? "selected" : ""}>Pausada</option><option value="finished" ${f.status === "finished" ? "selected" : ""}>Finalizada</option></select></div>
+                      <div class="md:col-span-2"><label class="block text-xs font-semibold">Instrucciones de pago</label><textarea id="f-payment" rows="2" maxlength="400" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm">${esc(f.paymentInstructions)}</textarea></div>
+                      <div><label class="block text-xs font-semibold">Boleto ganador (opcional)</label><input id="f-winner-num" type="text" maxlength="10" value="${esc(f.winnerNumber)}" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2 text-sm" /></div>
+                      <div><label class="block text-xs font-semibold">Nombre del ganador</label><input id="f-winner-name" type="text" maxlength="80" value="${esc(f.winnerName)}" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2 text-sm" /></div>
+                      <div class="md:col-span-2 flex items-center gap-2"><input id="f-featured" type="checkbox" ${f.isFeatured ? "checked" : ""} class="h-4 w-4" /><label for="f-featured" class="text-sm font-medium">Mostrar como rifa principal</label></div>
+                    </div>
+                    <div class="flex justify-end gap-3 border-t border-stone-100 pt-4">
+                      <button type="submit" ${state.adminSaving ? "disabled" : ""} class="min-h-[44px] rounded-xl bg-[#141413] px-5 py-2.5 text-sm font-semibold text-white cursor-pointer">${state.adminSaving ? "Guardando..." : "Guardar cambios"}</button>
+                    </div>
+                  </form>`
+                : `<div class="space-y-4">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div class="inline-flex items-center gap-1 rounded-xl bg-stone-200/70 p-1 self-start">
+                        ${[
+                          ["all", "Todos"],
+                          ["apartado", "Apartados"],
+                          ["pagado", "Pagados"],
+                        ]
+                          .map(
+                            ([id, lbl]) =>
+                              `<button type="button" data-admin-tfilter="${id}" class="rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer ${state.adminTicketFilter === id ? "bg-white shadow-xs" : "text-stone-600"}">${lbl}</button>`
+                          )
+                          .join("")}
+                      </div>
+                      <input id="admin-ticket-search" type="search" value="${esc(state.adminTicketSearch)}" placeholder="Buscar #, nombre, cédula, tel o fecha..." class="w-full sm:w-72 rounded-xl border border-stone-200 bg-white py-2 px-3 text-sm" />
+                    </div>
+                    <div class="overflow-hidden rounded-2xl border border-stone-200 bg-white">
+                      <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                          <thead><tr class="border-b border-stone-200 bg-stone-50 text-xs font-semibold text-stone-600"><th class="px-4 py-3">Boleto</th><th class="px-4 py-3">Participante</th><th class="px-4 py-3">Cédula</th><th class="px-4 py-3">WhatsApp</th><th class="px-4 py-3">Fecha y hora</th><th class="px-4 py-3">Estado</th><th class="px-4 py-3 text-right">Acciones</th></tr></thead>
+                          <tbody class="divide-y divide-stone-100">
+                            ${
+                              filteredTickets.length === 0
+                                ? `<tr><td colspan="7" class="px-4 py-8 text-center text-stone-500">No hay boletos registrados.</td></tr>`
+                                : filteredTickets
+                                    .map((t) => {
+                                      const fmt = formatTicketNumber(t.ticketNumber, raffle.totalTickets, raffle.startNumber);
+                                      const contact = contactByKey.get(t.ticketKey);
+                                      const parts = formatReservationDateParts(t.createdAt ?? contact?.createdAt);
+                                      const nextStatus = t.status === "pagado" ? "apartado" : "pagado";
+                                      return `<tr>
+                                        <td class="px-4 py-3 font-mono-custom font-bold">#${fmt}</td>
+                                        <td class="px-4 py-3"><p class="font-semibold">${esc(t.holderName)}</p>${t.holderCity ? `<p class="text-xs text-stone-500">${esc(t.holderCity)}</p>` : ""}</td>
+                                        <td class="px-4 py-3 font-mono-custom text-xs">${esc(contact?.holderCedula || "—")}</td>
+                                        <td class="px-4 py-3 font-mono-custom text-xs">${esc(contact?.phone || "—")}</td>
+                                        <td class="px-4 py-3 whitespace-nowrap">${parts ? `<p class="font-mono-custom text-xs font-medium">${esc(parts.date)}</p><p class="font-mono-custom text-[11px] text-stone-500">${esc(parts.time)}</p>` : "—"}</td>
+                                        <td class="px-4 py-3 text-xs font-semibold ${t.status === "pagado" ? "text-teal-800" : "text-amber-800"}">${t.status === "pagado" ? "Pagado" : "Apartado"}</td>
+                                        <td class="px-4 py-3 text-right space-x-1 whitespace-nowrap">
+                                          <button type="button" data-toggle-status="${esc(t.ticketKey)}:${nextStatus}" class="rounded-lg border px-2.5 py-1.5 text-xs font-semibold cursor-pointer ${t.status === "pagado" ? "border-stone-300 bg-white" : "border-teal-700 bg-teal-700 text-white"}">${t.status === "pagado" ? "Pasar a apartado" : "Confirmar pago"}</button>
+                                          <button type="button" data-release-ticket="${esc(t.ticketKey)}:${fmt}" class="rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-semibold text-red-700 cursor-pointer">Liberar</button>
+                                        </td>
+                                      </tr>`;
+                                    })
+                                    .join("")
+                            }
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>`
+            }
+          </main>
+        `;
+      }
+
+      // === EVENTOS E INTERACCIONES ===
+      function bindEvents(raffle) {
+        document.querySelectorAll("[data-action='go-admin']").forEach((el) =>
+          el.addEventListener("click", () => {
+            state.activeView = "admin";
+            render();
+          })
+        );
+        document.querySelectorAll("[data-action='go-public']").forEach((el) =>
+          el.addEventListener("click", () => {
+            state.activeView = "public";
+            render();
+          })
+        );
+        document.querySelectorAll("[data-scroll]").forEach((el) =>
+          el.addEventListener("click", () => {
+            const targetId = el.getAttribute("data-scroll");
+            if (state.activeView !== "public") {
+              state.activeView = "public";
+              render();
+            }
+            setTimeout(() => document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth" }), 50);
+          })
+        );
+        document.querySelectorAll("[data-select-raffle]").forEach((el) =>
+          el.addEventListener("click", () => {
+            state.selectedRaffleId = el.getAttribute("data-select-raffle");
             state.selectedNumbers = [];
             state.receipt = null;
-            state.inspectedTicket = null;
-            attachRaffleSubListeners(state.selectedRaffleId);
-          });
-        });
-
-        document.querySelectorAll('[data-filter]').forEach((btn) => {
-          btn.addEventListener('click', () => {
-            state.boardFilter = btn.getAttribute('data-filter');
+            attachRaffleSubcollections();
             render();
-          });
-        });
-
-        document.getElementById('board-search')?.addEventListener('input', (e) => {
+          })
+        );
+        document.querySelectorAll("[data-board-filter]").forEach((el) =>
+          el.addEventListener("click", () => {
+            state.boardFilter = el.getAttribute("data-board-filter");
+            render();
+          })
+        );
+        document.getElementById("board-search")?.addEventListener("input", (e) => {
           state.boardSearch = e.target.value;
           render();
-          const el = document.getElementById('board-search');
-          el?.focus();
-          el?.setSelectionRange(el.value.length, el.value.length);
+          const inp = document.getElementById("board-search");
+          inp?.focus();
+          inp?.setSelectionRange(inp.value.length, inp.value.length);
         });
-
-        document.getElementById('participant-search')?.addEventListener('input', (e) => {
-          state.participantSearch = e.target.value;
-          render();
-          const el = document.getElementById('participant-search');
-          el?.focus();
-          el?.setSelectionRange(el.value.length, el.value.length);
-        });
-
-        document.querySelectorAll('[data-random]').forEach((btn) => {
-          btn.addEventListener('click', () => {
-            const count = Number(btn.getAttribute('data-random'));
-            const taken = new Set([...ticketMap.keys(), ...state.selectedNumbers]);
-            const avail = allNumbers.filter((n) => !taken.has(n));
+        document.querySelectorAll("[data-random]").forEach((el) =>
+          el.addEventListener("click", () => {
+            if (!raffle || raffle.status !== "active") return;
+            const count = Number(el.getAttribute("data-random"));
+            const taken = new Set([...state.tickets.map((t) => t.ticketNumber), ...state.selectedNumbers]);
+            const avail = [];
+            for (let i = 0; i < raffle.totalTickets; i++) {
+              const num = raffle.startNumber + i;
+              if (!taken.has(num)) avail.push(num);
+            }
             for (let i = avail.length - 1; i > 0; i--) {
               const j = Math.floor(Math.random() * (i + 1));
               [avail[i], avail[j]] = [avail[j], avail[i]];
             }
-            state.selectedNumbers = Array.from(new Set([...state.selectedNumbers, ...avail.slice(0, count)])).slice(0, 25);
+            state.selectedNumbers = Array.from(new Set([...state.selectedNumbers, ...avail.slice(0, count)]))
+              .slice(0, 25)
+              .sort((a, b) => a - b);
             state.receipt = null;
             render();
-          });
-        });
-
-        document.querySelectorAll('[data-ticket]').forEach((btn) => {
-          btn.addEventListener('click', () => {
-            const num = Number(btn.getAttribute('data-ticket'));
-            const existing = ticketMap.get(num);
+          })
+        );
+        document.querySelectorAll("[data-ticket]").forEach((el) =>
+          el.addEventListener("click", () => {
+            const num = Number(el.getAttribute("data-ticket"));
+            const existing = state.tickets.find((t) => t.ticketNumber === num);
             if (existing) {
               state.inspectedTicket = existing;
               render();
               return;
             }
-            if (raffle.status !== 'active') return;
+            if (!raffle || raffle.status !== "active") return;
             state.inspectedTicket = null;
             state.receipt = null;
             if (state.selectedNumbers.includes(num)) {
@@ -958,414 +1494,411 @@
               state.selectedNumbers = [...state.selectedNumbers, num].sort((a, b) => a - b);
             }
             render();
-          });
-        });
-
-        document.getElementById('close-inspected')?.addEventListener('click', () => {
+          })
+        );
+        document.querySelector("[data-action='close-inspect']")?.addEventListener("click", () => {
           state.inspectedTicket = null;
           render();
         });
-
-        document.querySelectorAll('[data-remove-num]').forEach((btn) => {
-          btn.addEventListener('click', () => {
-            const num = Number(btn.getAttribute('data-remove-num'));
-            state.selectedNumbers = state.selectedNumbers.filter((n) => n !== num);
+        document.querySelectorAll("[data-remove-num]").forEach((el) =>
+          el.addEventListener("click", () => {
+            const n = Number(el.getAttribute("data-remove-num"));
+            state.selectedNumbers = state.selectedNumbers.filter((x) => x !== n);
             render();
-          });
-        });
-
-        document.getElementById('btn-clear-sel')?.addEventListener('click', () => {
+          })
+        );
+        document.querySelector("[data-action='clear-selection']")?.addEventListener("click", () => {
           state.selectedNumbers = [];
           render();
         });
-
-        document.getElementById('btn-reset-receipt')?.addEventListener('click', () => {
+        document.querySelector("[data-action='reset-receipt']")?.addEventListener("click", () => {
           state.receipt = null;
           render();
         });
 
-        document.getElementById('buyer-form')?.addEventListener('submit', async (e) => {
+        document.getElementById("buyer-name")?.addEventListener("input", (e) => (state.buyerName = e.target.value));
+        document.getElementById("buyer-cedula")?.addEventListener("input", (e) => (state.buyerCedula = e.target.value));
+        document.getElementById("buyer-city")?.addEventListener("input", (e) => (state.buyerCity = e.target.value));
+        document.getElementById("buyer-phone")?.addEventListener("input", (e) => (state.buyerPhone = e.target.value));
+
+        document.getElementById("buyer-form")?.addEventListener("submit", async (e) => {
           e.preventDefault();
-          const name = document.getElementById('buyer-name').value.trim();
-          const city = document.getElementById('buyer-city').value.trim();
-          const phone = document.getElementById('buyer-phone').value.trim();
-          const errBox = document.getElementById('buyer-error');
-          errBox.classList.add('hidden');
-
-          if (name.length < 2) {
-            errBox.textContent = 'Ingresa tu nombre completo.';
-            errBox.classList.remove('hidden');
-            return;
-          }
-          if (sanitizeDigits(phone).length < 7) {
-            errBox.textContent = 'Ingresa un teléfono de WhatsApp válido.';
-            errBox.classList.remove('hidden');
-            return;
-          }
-
-          try {
-            await reserveTickets(name, city, phone);
-          } catch (err) {
-            errBox.textContent = err.message?.startsWith('{')
-              ? 'No pudimos completar el apartado. Verifica tus datos e intenta nuevamente.'
-              : err.message || 'Error al apartar boletos.';
-            errBox.classList.remove('hidden');
-          }
-        });
-      }
-
-      // --- Panel de Administrador ---
-      function renderAdminView() {
-        if (!state.authReady) {
-          return `<div class="mx-auto max-w-md px-4 py-16 text-center text-sm text-stone-600">Verificando sesión...</div>`;
-        }
-        if (!state.user) {
-          return `
-            <div class="mx-auto max-w-md px-4 py-16">
-              <div class="rounded-2xl border border-stone-200 bg-white p-8 text-center">
-                <h1 class="text-xl font-bold">Panel de Administrador</h1>
-                <p class="mt-2 text-sm text-stone-600">Inicia sesión con tu cuenta autorizada de Google para editar rifas, confirmar pagos o restablecer boletos.</p>
-                <button id="btn-google-login" type="button" class="mt-6 min-h-[44px] w-full rounded-xl bg-[#141413] px-4 py-3 text-sm font-semibold text-white hover:bg-stone-800 cursor-pointer">Iniciar sesión con Google</button>
-              </div>
-            </div>`;
-        }
-        if (!state.isAdmin) {
-          return `
-            <div class="mx-auto max-w-md px-4 py-16">
-              <div class="rounded-2xl border border-stone-200 bg-white p-8 text-center">
-                <h1 class="text-xl font-bold">Acceso restringido</h1>
-                <p class="mt-2 text-sm text-stone-600">La cuenta <strong>${esc(state.user.email)}</strong> no está autorizada como administradora.</p>
-                <button id="btn-google-logout" type="button" class="mt-6 min-h-[44px] w-full rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-sm font-semibold cursor-pointer">Cerrar sesión</button>
-              </div>
-            </div>`;
-        }
-
-        const raffle = state.isCreatingNew ? { ...DEFAULT_STARTER_RAFFLE, title: 'Nueva Rifa', prizeName: '', description: '' } : getActiveRaffle() || DEFAULT_STARTER_RAFFLE;
-        const contactMap = new Map(state.contacts.map((c) => [c.ticketKey, c]));
-        const stats = !state.isCreatingNew && getActiveRaffle() ? computeStats(getActiveRaffle()) : null;
-
-        const tq = state.adminTicketSearch.trim().toLowerCase();
-        const filteredTickets = state.tickets.filter((t) => {
-          if (state.adminTicketFilter !== 'all' && t.status !== state.adminTicketFilter) return false;
-          if (!tq) return true;
-          const fmt = formatTicketNumber(t.ticketNumber, raffle.totalTickets, raffle.startNumber);
-          const contact = contactMap.get(t.ticketKey);
-          return fmt.includes(tq) || t.holderName.toLowerCase().includes(tq) || (contact?.phone.includes(tq) ?? false);
-        });
-
-        return `
-          <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 space-y-6">
-            <div class="flex flex-col gap-4 rounded-2xl border border-stone-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p class="text-xs font-medium text-stone-500">Administrador · ${esc(state.user.email)}</p>
-                <h1 class="mt-0.5 text-xl font-bold">${state.isCreatingNew ? 'Crear nueva rifa' : esc(raffle.title)}</h1>
-              </div>
-              <div class="flex flex-wrap items-center gap-2">
-                ${
-                  state.raffles.length
-                    ? `<select id="admin-raffle-select" class="rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm font-medium">
-                        ${state.isCreatingNew ? '<option value="">Nueva rifa...</option>' : ''}
-                        ${state.raffles.map((r) => `<option value="${esc(r.id)}" ${!state.isCreatingNew && r.id === getActiveRaffle()?.id ? 'selected' : ''}>${esc(r.title)}</option>`).join('')}
-                      </select>`
-                    : ''
-                }
-                <button id="btn-new-raffle" type="button" class="rounded-xl bg-teal-700 px-3.5 py-2 text-sm font-semibold text-white hover:bg-teal-800 cursor-pointer">+ Nueva rifa</button>
-                <button id="btn-google-logout" type="button" class="rounded-xl border border-stone-300 bg-white px-3.5 py-2 text-sm font-medium cursor-pointer">Salir</button>
-              </div>
-            </div>
-
-            ${
-              state.adminFeedback
-                ? `<div class="rounded-xl border p-4 text-sm font-medium ${state.adminFeedback.type === 'success' ? 'border-teal-200 bg-teal-50 text-teal-900' : 'border-red-200 bg-red-50 text-red-900'}">${esc(state.adminFeedback.text)}</div>`
-                : ''
-            }
-
-            ${
-              state.confirmAction
-                ? `<div class="flex flex-col gap-3 rounded-2xl border border-red-300 bg-red-50 p-5 sm:flex-row sm:items-center sm:justify-between">
-                    <p class="text-sm font-bold text-red-900">${
-                      state.confirmAction === 'reset'
-                        ? '¿Restablecer todos los boletos de esta rifa?'
-                        : state.confirmAction === 'delete'
-                          ? '¿Eliminar esta rifa permanentemente?'
-                          : `¿Liberar el boleto #${esc(state.confirmAction.label)}?`
-                    }</p>
-                    <div class="flex gap-2">
-                      <button id="btn-cancel-confirm" type="button" class="rounded-xl border border-stone-300 bg-white px-3.5 py-2 text-xs font-semibold cursor-pointer">Cancelar</button>
-                      <button id="btn-exec-confirm" type="button" class="rounded-xl bg-red-700 px-3.5 py-2 text-xs font-semibold text-white cursor-pointer">Sí, confirmar</button>
-                    </div>
-                  </div>`
-                : ''
-            }
-
-            ${
-              stats
-                ? `<div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                    <div class="rounded-2xl border border-stone-200 bg-white p-4"><p class="text-xs text-stone-500">Ocupados</p><p class="mt-1 font-mono text-2xl font-bold tabular-nums">${stats.occupiedCount} / ${stats.total}</p></div>
-                    <div class="rounded-2xl border border-stone-200 bg-white p-4"><p class="text-xs text-stone-500">Pagados</p><p class="mt-1 font-mono text-2xl font-bold text-teal-800 tabular-nums">${stats.paidCount}</p></div>
-                    <div class="rounded-2xl border border-stone-200 bg-white p-4"><p class="text-xs text-stone-500">Recaudado</p><p class="mt-1 font-mono text-xl font-bold tabular-nums">${esc(formatMoney(stats.collectedAmount, raffle.currency))}</p></div>
-                    <div class="rounded-2xl border border-stone-200 bg-white p-4"><p class="text-xs text-stone-500">Por cobrar (${stats.reservedCount})</p><p class="mt-1 font-mono text-xl font-bold text-amber-800 tabular-nums">${esc(formatMoney(stats.pendingAmount, raffle.currency))}</p></div>
-                  </div>`
-                : ''
-            }
-
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div class="inline-flex items-center gap-1 rounded-xl bg-stone-200/70 p-1 self-start">
-                <button type="button" data-admin-tab="config" class="rounded-lg px-4 py-2 text-sm font-semibold cursor-pointer ${state.adminTab === 'config' ? 'bg-white shadow-xs' : 'text-stone-600'}">Configurar rifa</button>
-                ${!state.isCreatingNew ? `<button type="button" data-admin-tab="tickets" class="rounded-lg px-4 py-2 text-sm font-semibold cursor-pointer ${state.adminTab === 'tickets' ? 'bg-white shadow-xs' : 'text-stone-600'}">Boletos y participantes (${state.tickets.length})</button>` : ''}
-              </div>
-              ${
-                !state.isCreatingNew && getActiveRaffle()
-                  ? `<div class="flex gap-2">
-                      <button id="btn-ask-reset" type="button" class="rounded-xl border border-stone-300 bg-white px-3.5 py-2 text-xs font-semibold hover:bg-stone-100 cursor-pointer">Restablecer boletos</button>
-                      <button id="btn-ask-delete" type="button" class="rounded-xl border border-red-200 bg-white px-3.5 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 cursor-pointer">Eliminar rifa</button>
-                    </div>`
-                  : ''
-              }
-            </div>
-
-            ${
-              state.adminTab === 'config'
-                ? `<form id="admin-raffle-form" class="rounded-2xl border border-stone-200 bg-white p-6 space-y-5">
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                      <div><label class="block text-xs font-semibold">Título de la rifa</label><input id="f-title" type="text" required value="${esc(raffle.title)}" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm" /></div>
-                      <div><label class="block text-xs font-semibold">Premio principal</label><input id="f-prize" type="text" required value="${esc(raffle.prizeName)}" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm" /></div>
-                      <div class="md:col-span-2"><label class="block text-xs font-semibold">Descripción</label><textarea id="f-desc" rows="2" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm">${esc(raffle.description)}</textarea></div>
-                      <div class="md:col-span-2"><label class="block text-xs font-semibold">URL de imagen del premio</label><input id="f-image" type="url" value="${esc(raffle.prizeImage)}" placeholder="https://..." class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm" /></div>
-                      <div><label class="block text-xs font-semibold">Precio por boleto</label><input id="f-price" type="number" min="1" step="any" required value="${esc(raffle.ticketPrice)}" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 font-mono text-sm" /></div>
-                      <div><label class="block text-xs font-semibold">Moneda</label><input id="f-currency" type="text" required value="${esc(raffle.currency)}" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm" /></div>
-                      <div><label class="block text-xs font-semibold">Total de boletos (10-1000)</label><input id="f-total" type="number" min="10" max="1000" required value="${esc(raffle.totalTickets)}" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 font-mono text-sm" /></div>
-                      <div><label class="block text-xs font-semibold">Inicia en</label><select id="f-start" class="mt-1 w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 font-mono text-sm"><option value="0" ${raffle.startNumber === 0 ? 'selected' : ''}>00</option><option value="1" ${raffle.startNumber === 1 ? 'selected' : ''}>01</option></select></div>
-                      <div><label class="block text-xs font-semibold">Fecha del sorteo</label><input id="f-date" type="text" value="${esc(raffle.drawDate)}" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm" /></div>
-                      <div><label class="block text-xs font-semibold">Lotería / Método</label><input id="f-method" type="text" value="${esc(raffle.drawMethod)}" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm" /></div>
-                      <div><label class="block text-xs font-semibold">WhatsApp organizador</label><input id="f-wa" type="tel" required value="${esc(raffle.whatsappNumber)}" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 font-mono text-sm" /></div>
-                      <div><label class="block text-xs font-semibold">Estado</label><select id="f-status" class="mt-1 w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm"><option value="active" ${raffle.status === 'active' ? 'selected' : ''}>Activa</option><option value="paused" ${raffle.status === 'paused' ? 'selected' : ''}>Pausada</option><option value="finished" ${raffle.status === 'finished' ? 'selected' : ''}>Finalizada</option></select></div>
-                      <div class="md:col-span-2"><label class="block text-xs font-semibold">Instrucciones de pago</label><textarea id="f-payment" rows="2" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm">${esc(raffle.paymentInstructions)}</textarea></div>
-                      <div><label class="block text-xs font-semibold">Boleto ganador (opcional)</label><input id="f-win-num" type="text" value="${esc(raffle.winnerNumber)}" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 font-mono text-sm" /></div>
-                      <div><label class="block text-xs font-semibold">Nombre ganador (opcional)</label><input id="f-win-name" type="text" value="${esc(raffle.winnerName)}" class="mt-1 w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm" /></div>
-                      <div class="md:col-span-2 flex items-center gap-2"><input id="f-featured" type="checkbox" ${raffle.isFeatured ? 'checked' : ''} class="h-4 w-4" /><label for="f-featured" class="text-sm font-medium">Mostrar como rifa principal</label></div>
-                    </div>
-                    <div class="flex justify-end gap-3 border-t border-stone-100 pt-4">
-                      ${state.isCreatingNew ? `<button type="button" id="btn-cancel-new" class="rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-sm font-semibold cursor-pointer">Cancelar</button>` : ''}
-                      <button type="submit" class="rounded-xl bg-[#141413] px-5 py-2.5 text-sm font-semibold text-white hover:bg-stone-800 cursor-pointer">${state.isCreatingNew ? 'Publicar nueva rifa' : 'Guardar cambios'}</button>
-                    </div>
-                  </form>`
-                : `<div class="space-y-4">
-                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div class="inline-flex gap-1 rounded-xl bg-stone-200/70 p-1 self-start">
-                        ${[['all', 'Todos'], ['apartado', 'Apartados'], ['pagado', 'Pagados']]
-                          .map(([id, label]) => `<button type="button" data-adm-filter="${id}" class="rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer ${state.adminTicketFilter === id ? 'bg-white shadow-xs' : 'text-stone-600'}">${label}</button>`)
-                          .join('')}
-                      </div>
-                      <input id="admin-ticket-search" type="search" value="${esc(state.adminTicketSearch)}" placeholder="Buscar #, nombre o teléfono..." class="w-full sm:w-72 rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-sm" />
-                    </div>
-                    <div class="overflow-hidden rounded-2xl border border-stone-200 bg-white">
-                      <div class="overflow-x-auto">
-                        <table class="w-full text-left text-sm">
-                          <thead><tr class="border-b border-stone-200 bg-stone-50 text-xs font-semibold text-stone-600"><th class="px-4 py-3">Boleto</th><th class="px-4 py-3">Participante</th><th class="px-4 py-3">WhatsApp</th><th class="px-4 py-3">Estado</th><th class="px-4 py-3 text-right">Acciones</th></tr></thead>
-                          <tbody class="divide-y divide-stone-100">
-                            ${filteredTickets
-                              .map((t) => {
-                                const fmt = formatTicketNumber(t.ticketNumber, raffle.totalTickets, raffle.startNumber);
-                                const contact = contactMap.get(t.ticketKey);
-                                const digits = contact ? sanitizeDigits(contact.phone) : '';
-                                return `<tr>
-                                  <td class="px-4 py-3 font-mono font-bold">#${fmt}</td>
-                                  <td class="px-4 py-3"><p class="font-semibold">${esc(t.holderName)}</p><p class="text-xs text-stone-500">${esc(t.holderCity)}</p></td>
-                                  <td class="px-4 py-3 font-mono text-xs">${esc(contact?.phone || '—')}</td>
-                                  <td class="px-4 py-3 text-xs font-semibold ${t.status === 'pagado' ? 'text-teal-800' : 'text-amber-800'}">${t.status === 'pagado' ? 'Pagado' : 'Apartado'}</td>
-                                  <td class="px-4 py-3 text-right">
-                                    <div class="inline-flex gap-2">
-                                      <button type="button" data-toggle-status="${esc(t.ticketKey)}" data-next-status="${t.status === 'pagado' ? 'apartado' : 'pagado'}" class="rounded-lg px-2.5 py-1.5 text-xs font-semibold cursor-pointer ${t.status === 'pagado' ? 'border border-stone-300 bg-white' : 'bg-teal-700 text-white'}">${t.status === 'pagado' ? 'Pasar a apartado' : 'Confirmar pago'}</button>
-                                      ${digits ? `<a href="https://wa.me/${digits}" target="_blank" rel="noopener noreferrer" class="rounded-lg border border-green-300 bg-green-50 px-2.5 py-1.5 text-xs font-semibold text-green-800">WA</a>` : ''}
-                                      <button type="button" data-release-ticket="${esc(t.ticketKey)}" data-release-label="${fmt}" class="rounded-lg border border-red-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-red-700 cursor-pointer">Liberar</button>
-                                    </div>
-                                  </td>
-                                </tr>`;
-                              })
-                              .join('')}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>`
-            }
-          </div>`;
-      }
-
-      function bindAdminEvents() {
-        document.getElementById('btn-google-login')?.addEventListener('click', () => signInWithPopup(auth, googleProvider));
-        document.getElementById('btn-google-logout')?.addEventListener('click', () => signOut(auth));
-
-        document.getElementById('admin-raffle-select')?.addEventListener('change', (e) => {
-          state.isCreatingNew = false;
-          state.selectedRaffleId = e.target.value;
-          state.adminFeedback = null;
-          state.confirmAction = null;
-          attachRaffleSubListeners(state.selectedRaffleId);
-        });
-
-        document.getElementById('btn-new-raffle')?.addEventListener('click', () => {
-          state.isCreatingNew = true;
-          state.adminTab = 'config';
-          state.adminFeedback = null;
-          render();
-        });
-
-        document.getElementById('btn-cancel-new')?.addEventListener('click', () => {
-          state.isCreatingNew = false;
-          render();
-        });
-
-        document.querySelectorAll('[data-admin-tab]').forEach((btn) => {
-          btn.addEventListener('click', () => {
-            state.adminTab = btn.getAttribute('data-admin-tab');
+          const errs = {};
+          const name = state.buyerName.trim();
+          const cedula = state.buyerCedula.trim();
+          const cedulaDigits = normalizeCedulaDigits(cedula);
+          const phoneDigits = sanitizePhoneDigits(state.buyerPhone);
+          if (state.selectedNumbers.length === 0) errs.selectedNumbers = "Selecciona un boleto.";
+          if (name.length < 2) errs.holderName = "Ingresa tu nombre completo.";
+          if (cedulaDigits.length < 5 || cedulaDigits.length > 15) errs.holderCedula = "Ingresa una cédula válida.";
+          if (phoneDigits.length < 7 || phoneDigits.length > 18) errs.phone = "Ingresa un WhatsApp válido.";
+          if (Object.keys(errs).length > 0) {
+            state.buyerErrors = errs;
             render();
-          });
-        });
-
-        document.getElementById('btn-ask-reset')?.addEventListener('click', () => {
-          state.confirmAction = 'reset';
-          render();
-        });
-        document.getElementById('btn-ask-delete')?.addEventListener('click', () => {
-          state.confirmAction = 'delete';
-          render();
-        });
-        document.getElementById('btn-cancel-confirm')?.addEventListener('click', () => {
-          state.confirmAction = null;
-          render();
-        });
-
-        document.getElementById('btn-exec-confirm')?.addEventListener('click', async () => {
-          const active = getActiveRaffle();
-          if (!active || !state.confirmAction) return;
-          if (state.confirmAction === 'reset') {
-            await deleteSubcollection(active.id, 'tickets');
-            await deleteSubcollection(active.id, 'contacts');
-            const batch = writeBatch(db);
-            batch.update(doc(db, 'raffles', active.id), { winnerNumber: '', winnerName: '', status: 'active', updatedAt: serverTimestamp() });
-            await batch.commit();
-            state.adminFeedback = { type: 'success', text: 'Boletos restablecidos correctamente.' };
-          } else if (state.confirmAction === 'delete') {
-            await deleteSubcollection(active.id, 'tickets');
-            await deleteSubcollection(active.id, 'contacts');
-            const batch = writeBatch(db);
-            batch.delete(doc(db, 'raffles', active.id));
-            await batch.commit();
-            state.selectedRaffleId = '';
-            state.adminFeedback = { type: 'success', text: 'Rifa eliminada correctamente.' };
-          } else if (state.confirmAction.type === 'release') {
-            const batch = writeBatch(db);
-            batch.delete(doc(db, 'raffles', active.id, 'tickets', state.confirmAction.ticketKey));
-            batch.delete(doc(db, 'raffles', active.id, 'contacts', state.confirmAction.ticketKey));
-            await batch.commit();
-            state.adminFeedback = { type: 'success', text: `Boleto #${state.confirmAction.label} liberado.` };
+            return;
           }
-          state.confirmAction = null;
+          state.buyerErrors = {};
+          state.buyerSubmitError = null;
+          state.buyerSubmitting = true;
           render();
-        });
-
-        document.getElementById('admin-raffle-form')?.addEventListener('submit', async (e) => {
-          e.preventDefault();
-          const active = getActiveRaffle();
-          const targetId = state.isCreatingNew || !active ? `rifa-${Date.now().toString(36)}` : active.id;
-          const isFeatured = document.getElementById('f-featured').checked;
-          const payload = {
-            title: document.getElementById('f-title').value.trim().slice(0, 120),
-            prizeName: document.getElementById('f-prize').value.trim().slice(0, 120),
-            description: document.getElementById('f-desc').value.trim().slice(0, 500),
-            prizeImage: document.getElementById('f-image').value.trim().slice(0, 500),
-            ticketPrice: Number(document.getElementById('f-price').value),
-            currency: document.getElementById('f-currency').value.trim().slice(0, 10) || 'MXN',
-            totalTickets: Math.min(1000, Math.max(10, parseInt(document.getElementById('f-total').value, 10) || 100)),
-            startNumber: Number(document.getElementById('f-start').value) === 1 ? 1 : 0,
-            drawDate: document.getElementById('f-date').value.trim().slice(0, 60),
-            drawMethod: document.getElementById('f-method').value.trim().slice(0, 120),
-            whatsappNumber: document.getElementById('f-wa').value.trim().slice(0, 25),
-            status: document.getElementById('f-status').value,
-            paymentInstructions: document.getElementById('f-payment').value.trim().slice(0, 400),
-            winnerNumber: document.getElementById('f-win-num').value.trim().slice(0, 10),
-            winnerName: document.getElementById('f-win-name').value.trim().slice(0, 80),
-            isFeatured,
-            updatedAt: serverTimestamp(),
-          };
-
-          const batch = writeBatch(db);
-          if (isFeatured) {
-            state.raffles.forEach((r) => {
-              if (r.id !== targetId && r.isFeatured) {
-                batch.update(doc(db, 'raffles', r.id), { isFeatured: false, updatedAt: serverTimestamp() });
+          try {
+            const nums = [...state.selectedNumbers].sort((a, b) => a - b);
+            const cedulaHash = await hashCedula(cedula);
+            await runTransaction(db, async (tx) => {
+              const refs = nums.map((num) => ({
+                num,
+                key: String(num),
+                tRef: doc(db, "raffles", raffle.id, "tickets", String(num)),
+                cRef: doc(db, "raffles", raffle.id, "contacts", String(num)),
+              }));
+              const snaps = await Promise.all(refs.map((r) => tx.get(r.tRef)));
+              for (let i = 0; i < snaps.length; i++) {
+                if (snaps[i].exists()) {
+                  throw new Error(`El boleto #${formatTicketNumber(refs[i].num, raffle.totalTickets, raffle.startNumber)} acaba de ser apartado.`);
+                }
+              }
+              for (const item of refs) {
+                tx.set(item.tRef, {
+                  raffleId: raffle.id,
+                  ticketKey: item.key,
+                  ticketNumber: item.num,
+                  holderName: name.slice(0, 80),
+                  holderCity: state.buyerCity.trim().slice(0, 60),
+                  holderCedulaHash: cedulaHash,
+                  status: "apartado",
+                  createdAt: serverTimestamp(),
+                  updatedAt: serverTimestamp(),
+                });
+                tx.set(item.cRef, {
+                  raffleId: raffle.id,
+                  ticketKey: item.key,
+                  holderName: name.slice(0, 80),
+                  holderCedula: cedula.slice(0, 20),
+                  phone: state.buyerPhone.trim().slice(0, 25),
+                  createdAt: serverTimestamp(),
+                });
               }
             });
+            const totalAmount = nums.length * raffle.ticketPrice;
+            const totalAmountBs = convertToBolivares(totalAmount, raffle.currency, state.bcvRate);
+            state.receipt = {
+              raffleTitle: raffle.title,
+              formattedNumbers: nums.map((n) => formatTicketNumber(n, raffle.totalTickets, raffle.startNumber)),
+              holderName: name,
+              holderCedula: cedula,
+              totalAmount,
+              totalAmountBs,
+              currency: raffle.currency,
+              paymentInstructions: raffle.paymentInstructions,
+              whatsappUrl: buildWhatsAppUrl({
+                whatsappPhone: raffle.whatsappNumber,
+                raffleTitle: raffle.title,
+                ticketNumbers: nums,
+                totalTickets: raffle.totalTickets,
+                startNumber: raffle.startNumber,
+                totalAmount,
+                totalAmountBs,
+                currency: raffle.currency,
+                holderName: name,
+                holderCedula: cedula,
+                holderCity: state.buyerCity.trim(),
+              }),
+            };
+            state.selectedNumbers = [];
+            state.buyerName = "";
+            state.buyerCedula = "";
+            state.buyerCity = "";
+            state.buyerPhone = "";
+          } catch (err) {
+            state.buyerSubmitError = err.message || "Error al apartar.";
+          } finally {
+            state.buyerSubmitting = false;
+            render();
           }
-          if (state.isCreatingNew || !active) {
-            batch.set(doc(db, 'raffles', targetId), { ...payload, createdAt: serverTimestamp() });
+        });
+
+        // Verificador
+        document.querySelectorAll("[data-verify-mode]").forEach((el) =>
+          el.addEventListener("click", () => {
+            state.verifyMode = el.getAttribute("data-verify-mode");
+            render();
+          })
+        );
+        document.getElementById("verify-input")?.addEventListener("input", (e) => (state.verifyQuery = e.target.value));
+        document.getElementById("verify-form")?.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          if (!raffle) return;
+          const q = state.verifyQuery.trim();
+          if (!q) return;
+          const digits = normalizeCedulaDigits(q);
+          if (!digits) {
+            state.verifyResult = { kind: "invalid", message: "Ingresa un número de boleto o cédula válida." };
+            render();
+            return;
+          }
+          const resolvedMode =
+            state.verifyMode === "ticket" || state.verifyMode === "cedula"
+              ? state.verifyMode
+              : q.startsWith("#")
+                ? "ticket"
+                : /^[vejpVEJP]/.test(q) || digits.length >= 5
+                  ? "cedula"
+                  : "ticket";
+          if (resolvedMode === "ticket") {
+            const num = Number(digits);
+            if (!Number.isInteger(num) || num < raffle.startNumber || num > raffle.startNumber + raffle.totalTickets - 1) {
+              state.verifyResult = { kind: "out_of_range", rawNumber: digits };
+            } else {
+              const formattedNumber = formatTicketNumber(num, raffle.totalTickets, raffle.startNumber);
+              const found = state.tickets.find((t) => t.ticketNumber === num);
+              state.verifyResult = found
+                ? { kind: "ticket_found", ticket: found, formattedNumber }
+                : { kind: "ticket_available", formattedNumber };
+            }
           } else {
-            batch.update(doc(db, 'raffles', targetId), payload);
+            if (digits.length < 5) {
+              state.verifyResult = { kind: "invalid", message: "Para buscar por cédula ingresa al menos 5 dígitos." };
+            } else {
+              const h = await hashCedula(digits);
+              state.verifyResult = {
+                kind: "cedula_results",
+                cedulaDigits: digits,
+                matches: state.tickets.filter((t) => t.holderCedulaHash === h),
+              };
+            }
           }
-          await batch.commit();
-          state.isCreatingNew = false;
-          state.selectedRaffleId = targetId;
-          state.adminFeedback = { type: 'success', text: 'Rifa guardada en la nube.' };
           render();
         });
 
-        document.querySelectorAll('[data-adm-filter]').forEach((btn) => {
-          btn.addEventListener('click', () => {
-            state.adminTicketFilter = btn.getAttribute('data-adm-filter');
-            render();
-          });
+        document.getElementById("participants-search")?.addEventListener("input", (e) => {
+          state.participantsSearch = e.target.value;
+          render();
+          const inp = document.getElementById("participants-search");
+          inp?.focus();
+          inp?.setSelectionRange(inp.value.length, inp.value.length);
         });
 
-        document.getElementById('admin-ticket-search')?.addEventListener('input', (e) => {
+        // Eventos Admin
+        document.querySelector("[data-action='admin-login']")?.addEventListener("click", () => signInWithPopup(auth, googleProvider));
+        document.querySelector("[data-action='admin-logout']")?.addEventListener("click", () => signOut(auth));
+        document.getElementById("admin-raffle-select")?.addEventListener("change", (e) => {
+          state.isCreatingNew = false;
+          state.selectedRaffleId = e.target.value;
+          const match = state.raffles.find((r) => r.id === e.target.value);
+          if (match) state.adminForm = { ...match };
+          attachRaffleSubcollections();
+          render();
+        });
+        document.querySelector("[data-action='admin-new-raffle']")?.addEventListener("click", () => {
+          state.isCreatingNew = true;
+          state.adminTab = "config";
+          state.adminForm = { ...DEFAULT_STARTER_RAFFLE, title: "Nueva Rifa", prizeName: "", description: "" };
+          render();
+        });
+        document.querySelectorAll("[data-admin-tab]").forEach((el) =>
+          el.addEventListener("click", () => {
+            state.adminTab = el.getAttribute("data-admin-tab");
+            render();
+          })
+        );
+        document.getElementById("admin-brand-name")?.addEventListener("input", (e) => (state.brandDraft = e.target.value));
+        document.getElementById("admin-brand-form")?.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const clean = state.brandDraft.trim();
+          if (clean.length < 2 || clean.length > 40) {
+            state.brandError = "El nombre del sitio debe tener entre 2 y 40 caracteres.";
+            render();
+            return;
+          }
+          state.brandError = null;
+          state.brandSaving = true;
+          render();
+          try {
+            await setDoc(doc(db, "settings", "branding"), { brandName: clean, updatedAt: serverTimestamp() });
+            state.adminFeedback = { type: "success", text: "Nombre del sitio actualizado y guardado en la nube." };
+          } catch (err) {
+            state.brandError = err.message;
+          } finally {
+            state.brandSaving = false;
+            render();
+          }
+        });
+
+        document.getElementById("f-image-file")?.addEventListener("change", async (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          state.adminImageBusy = true;
+          render();
+          try {
+            state.adminForm.prizeImage = await compressGalleryImage(file);
+          } catch (err) {
+            state.adminFeedback = { type: "error", text: err.message };
+          } finally {
+            state.adminImageBusy = false;
+            render();
+          }
+        });
+        document.getElementById("f-image-url")?.addEventListener("input", (e) => (state.adminForm.prizeImage = e.target.value));
+        document.querySelector("[data-action='clear-image']")?.addEventListener("click", () => {
+          state.adminForm.prizeImage = "";
+          render();
+        });
+
+        document.getElementById("admin-raffle-form")?.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const f = state.adminForm;
+          f.title = document.getElementById("f-title").value.trim();
+          f.prizeName = document.getElementById("f-prize").value.trim();
+          f.description = document.getElementById("f-desc").value.trim();
+          f.ticketPrice = Number(document.getElementById("f-price").value);
+          f.currency = document.getElementById("f-currency").value;
+          f.totalTickets = parseInt(document.getElementById("f-total").value || "100", 10);
+          f.startNumber = Number(document.getElementById("f-start").value) === 1 ? 1 : 0;
+          f.drawDate = document.getElementById("f-date").value.trim();
+          f.drawMethod = document.getElementById("f-method").value.trim();
+          f.whatsappNumber = document.getElementById("f-wa").value.trim();
+          f.status = document.getElementById("f-status").value;
+          f.paymentInstructions = document.getElementById("f-payment").value.trim();
+          f.winnerNumber = document.getElementById("f-winner-num").value.trim();
+          f.winnerName = document.getElementById("f-winner-name").value.trim();
+          f.isFeatured = document.getElementById("f-featured").checked;
+
+          if (f.title.length < 3 || f.prizeName.length < 2 || !(f.ticketPrice > 0)) {
+            state.adminFeedback = { type: "error", text: "Verifica el título, premio y precio por boleto." };
+            render();
+            return;
+          }
+          state.adminSaving = true;
+          render();
+          try {
+            const targetId = state.isCreatingNew || !raffle ? `rifa-${Date.now().toString(36)}` : raffle.id;
+            const batch = writeBatch(db);
+            if (f.isFeatured) {
+              for (const ex of state.raffles) {
+                if (ex.id !== targetId && ex.isFeatured) {
+                  batch.update(doc(db, "raffles", ex.id), { isFeatured: false, updatedAt: serverTimestamp() });
+                }
+              }
+            }
+            const payload = {
+              title: f.title.slice(0, 120),
+              description: f.description.slice(0, 500),
+              prizeName: f.prizeName.slice(0, 120),
+              prizeImage: f.prizeImage.trim().slice(0, MAX_PRIZE_IMAGE_LENGTH),
+              ticketPrice: f.ticketPrice,
+              currency: f.currency,
+              totalTickets: Math.min(1000, Math.max(10, f.totalTickets)),
+              startNumber: f.startNumber,
+              drawDate: f.drawDate.slice(0, 60),
+              drawMethod: f.drawMethod.slice(0, 120),
+              whatsappNumber: f.whatsappNumber.slice(0, 25),
+              paymentInstructions: f.paymentInstructions.slice(0, 400),
+              status: f.status,
+              isFeatured: f.isFeatured,
+              winnerNumber: f.winnerNumber.slice(0, 10),
+              winnerName: f.winnerName.slice(0, 80),
+              updatedAt: serverTimestamp(),
+            };
+            if (state.isCreatingNew || !raffle) {
+              batch.set(doc(db, "raffles", targetId), { ...payload, createdAt: serverTimestamp() });
+            } else {
+              batch.update(doc(db, "raffles", targetId), payload);
+            }
+            await batch.commit();
+            state.isCreatingNew = false;
+            state.selectedRaffleId = targetId;
+            state.adminFeedback = { type: "success", text: "Rifa guardada en la nube." };
+          } catch (err) {
+            state.adminFeedback = { type: "error", text: err.message };
+          } finally {
+            state.adminSaving = false;
+            render();
+          }
+        });
+
+        document.querySelectorAll("[data-admin-tfilter]").forEach((el) =>
+          el.addEventListener("click", () => {
+            state.adminTicketFilter = el.getAttribute("data-admin-tfilter");
+            render();
+          })
+        );
+        document.getElementById("admin-ticket-search")?.addEventListener("input", (e) => {
           state.adminTicketSearch = e.target.value;
           render();
-          const el = document.getElementById('admin-ticket-search');
-          el?.focus();
-          el?.setSelectionRange(el.value.length, el.value.length);
+          const inp = document.getElementById("admin-ticket-search");
+          inp?.focus();
+          inp?.setSelectionRange(inp.value.length, inp.value.length);
         });
-
-        document.querySelectorAll('[data-toggle-status]').forEach((btn) => {
-          btn.addEventListener('click', async () => {
-            const active = getActiveRaffle();
-            if (!active) return;
-            const key = btn.getAttribute('data-toggle-status');
-            const nextStatus = btn.getAttribute('data-next-status');
+        document.querySelectorAll("[data-toggle-status]").forEach((el) =>
+          el.addEventListener("click", async () => {
+            if (!raffle) return;
+            const [key, nextStatus] = el.getAttribute("data-toggle-status").split(":");
             const batch = writeBatch(db);
-            batch.update(doc(db, 'raffles', active.id, 'tickets', key), {
+            batch.update(doc(db, "raffles", raffle.id, "tickets", key), {
               status: nextStatus,
               updatedAt: serverTimestamp(),
             });
             await batch.commit();
-          });
-        });
-
-        document.querySelectorAll('[data-release-ticket]').forEach((btn) => {
-          btn.addEventListener('click', () => {
-            state.confirmAction = {
-              type: 'release',
-              ticketKey: btn.getAttribute('data-release-ticket'),
-              label: btn.getAttribute('data-release-label'),
-            };
+          })
+        );
+        document.querySelectorAll("[data-release-ticket]").forEach((el) =>
+          el.addEventListener("click", () => {
+            const [key, label] = el.getAttribute("data-release-ticket").split(":");
+            state.adminConfirm = { type: "release", key, label };
             render();
-          });
+          })
+        );
+        document.querySelector("[data-action='admin-ask-reset']")?.addEventListener("click", () => {
+          state.adminConfirm = "reset";
+          render();
+        });
+        document.querySelector("[data-action='admin-ask-delete']")?.addEventListener("click", () => {
+          state.adminConfirm = "delete";
+          render();
+        });
+        document.querySelector("[data-action='admin-cancel-confirm']")?.addEventListener("click", () => {
+          state.adminConfirm = null;
+          render();
+        });
+        document.querySelector("[data-action='admin-exec-confirm']")?.addEventListener("click", async () => {
+          if (!raffle || !state.adminConfirm) return;
+          if (state.adminConfirm.type === "release") {
+            const batch = writeBatch(db);
+            batch.delete(doc(db, "raffles", raffle.id, "tickets", state.adminConfirm.key));
+            batch.delete(doc(db, "raffles", raffle.id, "contacts", state.adminConfirm.key));
+            await batch.commit();
+          } else {
+            for (const sub of ["tickets", "contacts"]) {
+              const snap = await getDocs(collection(db, `raffles/${raffle.id}/${sub}`));
+              for (let i = 0; i < snap.docs.length; i += 400) {
+                const b = writeBatch(db);
+                snap.docs.slice(i, i + 400).forEach((d) => b.delete(d.ref));
+                await b.commit();
+              }
+            }
+            const b = writeBatch(db);
+            if (state.adminConfirm === "reset") {
+              b.update(doc(db, "raffles", raffle.id), {
+                winnerNumber: "",
+                winnerName: "",
+                status: "active",
+                updatedAt: serverTimestamp(),
+              });
+            } else {
+              b.delete(doc(db, "raffles", raffle.id));
+              state.selectedRaffleId = "";
+            }
+            await b.commit();
+          }
+          state.adminConfirm = null;
+          state.adminFeedback = { type: "success", text: "Acción completada." };
+          render();
         });
       }
 
-      // Navegación global
-      document.getElementById('nav-brand').addEventListener('click', () => {
-        state.view = 'public';
-        render();
-      });
-      document.getElementById('btn-toggle-view').addEventListener('click', () => {
-        state.view = state.view === 'public' ? 'admin' : 'public';
-        render();
-      });
-      document.getElementById('footer-toggle-view').addEventListener('click', () => {
-        state.view = state.view === 'public' ? 'admin' : 'public';
-        render();
-      });
+      loadBcvRate();
+      setInterval(loadBcvRate, 10 * 60 * 1000);
+      render();
     </script>
   </body>
 </html>
